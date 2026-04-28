@@ -1,0 +1,295 @@
+{
+  "project": "Omni AI Chat Platform",
+  "version": "1.0",
+  "parsed_at": "2026-04-22",
+  "source_documents": [
+    "AiChat-SRS-Main.md",
+    "AiChat-SRS-User-stories.md",
+    "AiChat-Database-Schema.md",
+    "AiChat-Tech-Stack.md",
+    "AiChat-UIUX-Wireframe.md"
+  ],
+
+  "functional_requirements": [
+    {
+      "id": "FR-01",
+      "title": "Multimodal Input",
+      "description": "Accept text (up to 4000 chars), images, files (PDF, DOCX, XLSX up to 20MB, max 5 attachments), and voice (Voice-to-Text).",
+      "source": "AiChat-SRS-Main.md §3.1, AiChat-SRS-User-stories.md US01"
+    },
+    {
+      "id": "FR-02",
+      "title": "Multimodal Output",
+      "description": "Return text, images (DALL-E/Midjourney), and Text-to-Speech audio.",
+      "source": "AiChat-SRS-Main.md §3.1"
+    },
+    {
+      "id": "FR-03",
+      "title": "Web Search Integration",
+      "description": "Auto-detect intent requiring live data; call Tavily/Serper API; inject results as context before routing to LLM. Show citations [1],[2] and reference links. Fallback message if search fails.",
+      "source": "AiChat-SRS-Main.md §3.1, AiChat-SRS-User-stories.md US03"
+    },
+    {
+      "id": "FR-04",
+      "title": "Model Routing",
+      "description": "Auto-select optimal model (Groq for speed on short queries <50 words; GPT-4o/Claude 3.5 for complex/file tasks) or allow manual selection via model_preference field.",
+      "source": "AiChat-SRS-Main.md §3.1, AiChat-SRS-User-stories.md US06"
+    },
+    {
+      "id": "FR-05",
+      "title": "Long-term Memory – Extraction",
+      "description": "After each conversation, run a background job to extract and store 'User Facts' (name, preferences, events) into the Vector Database linked by user_id.",
+      "source": "AiChat-SRS-Main.md §3.2, AiChat-SRS-User-stories.md US04 AC1-AC2"
+    },
+    {
+      "id": "FR-06",
+      "title": "Long-term Memory – RAG Retrieval",
+      "description": "At the start of each new chat, query the Vector DB for relevant memories and inject them into the System Prompt as context.",
+      "source": "AiChat-SRS-Main.md §3.2, AiChat-SRS-User-stories.md US04 AC3"
+    },
+    {
+      "id": "FR-07",
+      "title": "Webhook Messaging Integration",
+      "description": "Connect with Telegram and Zalo via webhooks. Map incoming messages to the internal messages table and stream responses back. Support /newchat, /summary, /mode commands.",
+      "source": "AiChat-SRS-Main.md §3.3, AiChat-SRS-User-stories.md US05"
+    },
+    {
+      "id": "FR-08",
+      "title": "Real-time Cloud Sync",
+      "description": "Chat history must sync in real-time between Web and Mobile App.",
+      "source": "AiChat-SRS-Main.md §3.3"
+    }
+  ],
+
+  "non_functional_requirements": [
+    {
+      "id": "NFR-01",
+      "title": "Performance",
+      "description": "Time to First Token (TTFT) must be under 2 seconds for fast models (Groq/Llama3).",
+      "source": "AiChat-SRS-Main.md §5"
+    },
+    {
+      "id": "NFR-02",
+      "title": "Security",
+      "description": "All conversation data encrypted at rest and in transit. API keys encrypted in DB. No sensitive info (passwords, credit cards) stored from chat content.",
+      "source": "AiChat-SRS-Main.md §5, §6"
+    },
+    {
+      "id": "NFR-03",
+      "title": "Availability",
+      "description": "System uptime target: 99.9%.",
+      "source": "AiChat-SRS-Main.md §5"
+    },
+    {
+      "id": "NFR-04",
+      "title": "Scalability",
+      "description": "Microservices architecture (Docker/Kubernetes) to allow adding new LLM providers without downtime.",
+      "source": "AiChat-SRS-Main.md §5"
+    },
+    {
+      "id": "NFR-05",
+      "title": "API Timeout",
+      "description": "LLM API requests must not exceed 30 seconds. On timeout, return 'Model Timeout' error and suggest a lighter model.",
+      "source": "AiChat-UIUX-Wireframe.md §IV R02"
+    },
+    {
+      "id": "NFR-06",
+      "title": "File Size Limit",
+      "description": "Maximum 20MB per file upload. Long documents are auto-chunked into a temporary Vector Store before chat.",
+      "source": "AiChat-UIUX-Wireframe.md §IV R01"
+    }
+  ],
+
+  "edge_cases": [
+    {
+      "id": "EX-01",
+      "title": "Primary Provider Down (Failover)",
+      "scenario": "OpenAI or primary LLM API is unavailable.",
+      "handling": "Auto-failover to backup provider (Anthropic or Google) within 3 seconds. Notify user with a subtle status message.",
+      "linked_us": "US06 AC3",
+      "source": "AiChat-SRS-Main.md §4, AiChat-SRS-User-stories.md US06"
+    },
+    {
+      "id": "EX-02",
+      "title": "Toxic / Harmful Content",
+      "scenario": "User requests content violating safety policy (sexual, hate speech, violence).",
+      "handling": "Run Moderation Layer BEFORE routing to LLM. Return default refusal: 'Tôi không thể hỗ trợ yêu cầu này vì vi phạm chính sách an toàn.'",
+      "linked_us": "EC-04",
+      "source": "AiChat-SRS-Main.md §4, AiChat-SRS-User-stories.md EC-04"
+    },
+    {
+      "id": "EX-03",
+      "title": "Context Window Overflow",
+      "scenario": "Conversation token count exceeds model's context limit.",
+      "handling": "Implement Sliding Window: summarize the oldest messages to free context space while preserving recency.",
+      "linked_us": "FR-05",
+      "source": "AiChat-SRS-Main.md §4"
+    },
+    {
+      "id": "EX-04",
+      "title": "Stream Disconnect",
+      "scenario": "Network drops while AI is streaming a response.",
+      "handling": "Client displays 'Connection lost' icon. Save partial chunks to LocalStorage. Auto-retry from last received token on reconnect.",
+      "linked_us": "US02, EC-02",
+      "source": "AiChat-SRS-Main.md §4, AiChat-SRS-User-stories.md EC-02"
+    },
+    {
+      "id": "EX-05",
+      "title": "Spam / Rate Limit",
+      "scenario": "Free user sends excessive requests.",
+      "handling": "Rate limit by IP and account (max 10 messages/minute). Return 403 with Captcha prompt or cooldown timer. Token quota checked via Redis before each request.",
+      "linked_us": "FR-04, NFR-02",
+      "source": "AiChat-SRS-Main.md §4, AiChat-UIUX-Wireframe.md §IV R03"
+    },
+    {
+      "id": "EX-06",
+      "title": "Password-Protected File",
+      "scenario": "User uploads a PDF with a password lock.",
+      "handling": "Return error: 'File này bị khóa, vui lòng mở khóa trước khi gửi.'",
+      "linked_us": "US01 EC-01",
+      "source": "AiChat-SRS-User-stories.md EC-01"
+    },
+    {
+      "id": "EX-07",
+      "title": "Contradictory Memory",
+      "scenario": "User provides conflicting preferences across sessions.",
+      "handling": "AI prioritizes the most recent fact and overwrites the old record in the Vector Database.",
+      "linked_us": "US04 EC-03",
+      "source": "AiChat-SRS-User-stories.md EC-03"
+    }
+  ],
+
+  "user_stories": [
+    {
+      "id": "US01",
+      "title": "Multimodal Input",
+      "acceptance_criteria": [
+        "AC1: Text input max 4000 chars (adjustable per model)",
+        "AC2: Up to 5 attachments — JPG, PNG, PDF, DOCX, XLSX",
+        "AC3: Voice input shows audio-wave animation; auto Voice-to-Text before sending",
+        "AC4: Show 'Uploading' state for files > 5MB"
+      ]
+    },
+    {
+      "id": "US02",
+      "title": "Streaming Response",
+      "acceptance_criteria": [
+        "AC1: Text rendered via SSE (Server-Sent Events) streaming",
+        "AC2: 'Stop Generating' button to interrupt mid-stream",
+        "AC3: Action buttons after each response: Copy, Like/Dislike, Re-generate"
+      ]
+    },
+    {
+      "id": "US03",
+      "title": "Real-time Web Search",
+      "acceptance_criteria": [
+        "AC1: System auto-detects intent; triggers Search API for live data queries",
+        "AC2: Citations shown as [1],[2] with reference list at response end",
+        "AC3: Fallback message if Search API fails"
+      ]
+    },
+    {
+      "id": "US04",
+      "title": "Long-term Memory",
+      "acceptance_criteria": [
+        "AC1: Background job extracts 'User Facts' after conversation ends",
+        "AC2: Facts stored in Vector DB keyed by user_id",
+        "AC3: Relevant facts injected into System Prompt at chat start"
+      ]
+    },
+    {
+      "id": "US05",
+      "title": "Telegram / Zalo Integration",
+      "acceptance_criteria": [
+        "AC1: QR code or link to connect Web account with Telegram/Zalo bot",
+        "AC2: Bot messages synced back to Web/Mobile chat history",
+        "AC3: Bot supports /newchat, /summary, /mode commands"
+      ]
+    },
+    {
+      "id": "US06",
+      "title": "Smart Model Routing",
+      "acceptance_criteria": [
+        "AC1: Short/simple queries (<50 words) routed to Groq Llama3",
+        "AC2: Complex queries or file attachments routed to GPT-4o or Claude 3.5 Sonnet",
+        "AC3: On 5xx error from any provider, auto-retry with another provider within 3 seconds"
+      ]
+    }
+  ],
+
+  "tech_stack": {
+    "frontend": "Next.js 14+ (App Router) + TailwindCSS",
+    "mobile": "Flutter or React Native",
+    "backend": "FastAPI (Python) — async",
+    "orchestrator": "LangChain",
+    "primary_db": "PostgreSQL (Supabase)",
+    "vector_db": "Pinecone or pgvector",
+    "cache": "Redis — session storage, rate limiting, daily quota",
+    "infrastructure": "Docker + Kubernetes"
+  },
+
+  "database_tables": {
+    "users": {
+      "columns": ["id (UUID PK)", "email (VARCHAR 255 UNIQUE)", "full_name (VARCHAR 100)", "avatar_url (TEXT)", "persona_config (JSONB)", "created_at (TIMESTAMP)"]
+    },
+    "conversations": {
+      "columns": ["id (UUID PK)", "user_id (UUID FK→users)", "title (VARCHAR 255)", "model_id (VARCHAR 50)", "is_archived (BOOLEAN DEFAULT FALSE)", "updated_at (TIMESTAMP)", "deleted_at (TIMESTAMP)"],
+      "indexes": ["user_id"]
+    },
+    "messages": {
+      "columns": ["id (UUID PK)", "conv_id (UUID FK→conversations)", "role (ENUM: user|assistant|system)", "content (TEXT)", "metadata (JSONB)", "tokens_used (INTEGER)", "deleted_at (TIMESTAMP)"],
+      "indexes": ["conv_id"]
+    },
+    "user_memories": {
+      "columns": ["id (UUID PK)", "user_id (UUID FK→users)", "fact_content (TEXT)", "vector_id (VARCHAR 255 INDEXED)", "importance_score (FLOAT 0.0-1.0)"]
+    },
+    "api_providers": {
+      "columns": ["id (VARCHAR 50 PK)", "base_url (TEXT)", "api_key (TEXT ENCRYPTED)", "is_active (BOOLEAN)"]
+    },
+    "daily_usage": {
+      "columns": ["user_id (UUID FK→users)", "usage_date (DATE)", "total_tokens (INTEGER)"],
+      "notes": "Updated after every completed message. Checked via Redis before processing."
+    }
+  },
+
+  "api_spec": {
+    "base_url": "https://api.omni-ai.io/v1",
+    "auth": "Bearer JWT in Authorization header",
+    "key_endpoint": {
+      "path": "POST /chat/completions",
+      "request_fields": ["conversation_id", "model_preference (auto|speed|quality)", "messages[]", "tools[]", "stream (bool)"],
+      "sse_event_types": ["status", "citations", "content", "done"]
+    },
+    "webhooks": {
+      "telegram": "POST /webhooks/telegram"
+    }
+  },
+
+  "orchestrator_logic": {
+    "step_1_intent_classification": {
+      "chatter_short": "Route to Groq Llama3",
+      "complex_or_files": "Route to Claude 3.5 Sonnet or GPT-4o",
+      "needs_live_data": "Activate Web Search Tool (Tavily/Serper)"
+    },
+    "step_2_context_injection": "Query Vector DB for user memories → append to System Prompt",
+    "step_3_failover": "On 429 or 5xx → switch to next provider in fallback list"
+  },
+
+  "ui_layout": {
+    "sidebar": "Conversation history, folders, profile, daily quota meter",
+    "chat_window_header": "Conversation title + active model badge (e.g. ⚡ Groq-Llama3)",
+    "message_bubbles": {
+      "user": "Right-aligned with attachment icons",
+      "assistant": "Left-aligned with streaming animation"
+    },
+    "smart_input_bar": {
+      "plus_icon": "Menu: Upload File, Camera, Web Search toggle",
+      "microphone_icon": "Hold to record — Voice-to-Text realtime"
+    },
+    "interactive_responses": {
+      "web_search": "Show 'Searching...' widget with site favicons",
+      "image_gen": "Show image with Variations/Upscale buttons",
+      "inline_citation": "Click [1] → opens side-panel with source content"
+    }
+  }
+}

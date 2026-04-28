@@ -1,0 +1,98 @@
+{
+  "nav": {
+    "chat": "Trò chuyện",
+    "agents": "Agents",
+    "settings": "Cài đặt",
+    "logout": "Đăng xuất"
+  },
+  "chat": {
+    "title": "Chat",
+    "newChat": "Trò chuyện mới",
+    "provider": "Nhà cung cấp",
+    "model": "Mô hình",
+    "selectProvider": "Chọn nhà cung cấp API",
+    "selectModel": "Chọn mô hình",
+    "apiKey": "API Key",
+    "enterApiKey": "Nhập API Key",
+    "send": "Gửi",
+    "stop": "Dừng",
+    "typing": "Đang gõ...",
+    "loading": "Đang tải...",
+    "noMessages": "Không có tin nhắn nào. Bắt đầu cuộc trò chuyện!",
+    "deleteChat": "Xóa trò chuyện",
+    "confirmDelete": "Bạn có chắc chắn muốn xóa cuộc trò chuyện này?",
+    "error": "Có lỗi xảy ra",
+    "retryMessage": "Thử lại"
+  },
+  "providers": {
+    "openai": "OpenAI",
+    "anthropic": "Anthropic",
+    "groq": "Groq",
+    "google": "Google Gemini",
+    "openrouter": "OpenRouter",
+    "nvidia": "NVIDIA NIM"
+  },
+  "models": {
+    "gpt4o": "GPT-4o",
+    "gpt4oMini": "GPT-4o Mini",
+    "claude35Sonnet": "Claude 3.5 Sonnet",
+    "llama370b": "Llama 3-70B",
+    "geminiPro": "Gemini Pro",
+    "auto": "Tự động"
+  },
+  "auth": {
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "confirmPassword": "Xác nhận mật khẩu",
+    "signIn": "Đăng nhập",
+    "signUp": "Đăng ký",
+    "forgotPassword": "Quên mật khẩu?",
+    "noAccount": "Không có tài khoản?",
+    "hasAccount": "Đã có tài khoản?",
+    "loginSuccess": "Đăng nhập thành công",
+    "registerSuccess": "Đăng ký thành công"
+  },
+  "settings": {
+    "title": "Cài đặt",
+    "language": "Ngôn ngữ",
+    "defaultProvider": "Nhà cung cấp mặc định",
+    "defaultModel": "Mô hình mặc định",
+    "theme": "Chủ đề",
+    "apiKeys": "Quản lý API Keys",
+    "notifications": "Thông báo",
+    "save": "Lưu",
+    "saved": "Đã lưu",
+    "cancel": "Hủy"
+  },
+  "agents": {
+    "title": "Agents",
+    "newAgent": "Agent mới",
+    "name": "Tên",
+    "description": "Mô tả",
+    "systemPrompt": "Prompt hệ thống",
+    "model": "Mô hình",
+    "temperature": "Nhiệt độ",
+    "maxTokens": "Số token tối đa",
+    "create": "Tạo",
+    "edit": "Chỉnh sửa",
+    "delete": "Xóa",
+    "noAgents": "Không có agents nào"
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Hủy",
+    "save": "Lưu",
+    "delete": "Xóa",
+    "edit": "Chỉnh sửa",
+    "back": "Quay lại",
+    "next": "Tiếp theo",
+    "close": "Đóng",
+    "loading": "Đang tải...",
+    "error": "Lỗi",
+    "success": "Thành công",
+    "warning": "Cảnh báo",
+    "info": "Thông tin"
+  }
+}

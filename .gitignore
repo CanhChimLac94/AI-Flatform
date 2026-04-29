@@ -40,3 +40,4 @@ Thumbs.db
 infrastructure/postgres/data/
 .claude/
 *collects*/
+uploads/

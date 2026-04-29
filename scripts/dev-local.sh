@@ -31,7 +31,8 @@ fi
 
 (
   cd "${BACKEND_DIR}"
-  pip install -r requirements.txt
+  # pip install -r requirements.txt
+  python -m pip install --no-cache-dir --force-reinstall -r requirements.txt
   uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ) &
 BACKEND_PID=$!

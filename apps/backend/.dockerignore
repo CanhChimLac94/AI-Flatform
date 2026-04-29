@@ -10,7 +10,6 @@ venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-alembic/versions/*.py
 tests/
 .git/
 .gitignore

@@ -81,7 +81,7 @@ fi
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  ✓ Deploy complete!"
-echo "  App   → http://localhost"
+echo "  App   → http://localhost:88"
 echo "  Logs  → make logs"
 echo "  Stop  → make down"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

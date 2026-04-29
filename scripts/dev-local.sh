@@ -7,6 +7,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_DIR="${ROOT_DIR}/apps/backend"
 FRONTEND_DIR="${ROOT_DIR}/apps/frontend"
 
+# echo "*********Root directory: ${ROOT_DIR} **************"
+# exit 0;
+
 if [[ ! -d "${BACKEND_DIR}" || ! -d "${FRONTEND_DIR}" ]]; then
   echo "ERROR: apps/backend or apps/frontend not found."
   exit 1

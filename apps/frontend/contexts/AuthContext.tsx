@@ -1,12 +1,13 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { login as apiLogin, getToken } from "@/lib/api";
+import { login as apiLogin, register as apiRegister, getToken } from "@/lib/api";
 
 interface AuthContextType {
   isAuthenticated: boolean;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
+  register: (email: string, name: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -26,7 +27,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const accessToken = await apiLogin(email, password);
-    // apiLogin already persists to localStorage via setToken
+    setToken(accessToken);
+    setIsAuthenticated(true);
+  };
+
+  const register = async (email: string, name: string, password: string) => {
+    const accessToken = await apiRegister(email, name, password);
     setToken(accessToken);
     setIsAuthenticated(true);
   };
@@ -38,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, token, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, token, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

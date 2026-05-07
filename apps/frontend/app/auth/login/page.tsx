@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -18,7 +18,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await login(email, password);
+      await login(identifier, password);
       router.replace("/chat");
     } catch (err) {
       setError((err as Error).message);
@@ -42,11 +42,12 @@ export default function LoginPage() {
             </p>
           )}
           <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            placeholder="Email hoặc Tên đăng nhập"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
             required
+            autoComplete="username"
             className="w-full bg-input-bg border border-gray-600 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 outline-none focus:border-accent transition-colors"
           />
           <input

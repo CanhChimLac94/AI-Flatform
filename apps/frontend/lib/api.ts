@@ -52,10 +52,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
-export async function login(email: string, password: string): Promise<string> {
+export async function login(identifier: string, password: string): Promise<string> {
   const data = await request<{ access_token: string }>("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ identifier, password }),
   });
   setToken(data.access_token);
   return data.access_token;
@@ -64,11 +64,12 @@ export async function login(email: string, password: string): Promise<string> {
 export async function register(
   email: string,
   full_name: string,
-  password: string
+  password: string,
+  username?: string,
 ): Promise<string> {
   const data = await request<{ access_token: string }>("/auth/register", {
     method: "POST",
-    body: JSON.stringify({ email, full_name, password }),
+    body: JSON.stringify({ email, full_name, password, ...(username ? { username } : {}) }),
   });
   setToken(data.access_token);
   return data.access_token;

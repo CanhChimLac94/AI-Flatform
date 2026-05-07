@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_current_user
@@ -18,10 +18,26 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     full_name: str
     password: str
+    username: str | None = None
+
+    @field_validator("username")
+    @classmethod
+    def _validate_username(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            return None
+        if len(v) < 3 or len(v) > 50:
+            raise ValueError("Username must be between 3 and 50 characters")
+        import re
+        if not re.match(r"^[a-zA-Z0-9_.-]+$", v):
+            raise ValueError("Username may only contain letters, numbers, _, . and -")
+        return v
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    identifier: str  # accepts email or username
     password: str
 
 
@@ -40,10 +56,10 @@ class PersonaConfig(BaseModel):
 class UserOut(BaseModel):
     id: str
     email: str
+    username: str | None = None
     full_name: str | None = None
     avatar_url: str | None = None
     persona_config: dict = {}
-    # Default provider/model — always non-null (fallback to openai/gpt-4o-mini)
     default_provider: str = DEFAULT_PROVIDER
     default_model: str = DEFAULT_MODEL
 
@@ -62,6 +78,7 @@ def _build_user_out(user: User) -> UserOut:
     return UserOut(
         id=str(user.id),
         email=user.email,
+        username=user.username,
         full_name=user.full_name,
         avatar_url=user.avatar_url,
         persona_config=user.persona_config or {},
@@ -91,10 +108,12 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     repo = UserRepository(db)
     if await repo.email_exists(body.email):
         raise HTTPException(status_code=400, detail="Email already registered")
+    if body.username and await repo.username_exists(body.username):
+        raise HTTPException(status_code=400, detail="Username already taken")
 
-    # default_provider / default_model are seeded by the SQLAlchemy column default
     user = await repo.create(
         email=body.email,
+        username=body.username,
         full_name=body.full_name,
         hashed_password=hash_password(body.password),
     )
@@ -105,14 +124,13 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
 @router.post("/login", response_model=TokenResponse)
 async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     repo = UserRepository(db)
-    user = await repo.get_by_email(body.email)
+    user = await repo.get_by_identifier(body.identifier)
 
     if user is None or user.hashed_password is None:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not verify_password(body.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Backfill defaults for users created before migration 0003
     await _ensure_defaults(user, repo, db)
 
     return TokenResponse(access_token=create_access_token(user.id))

@@ -6,8 +6,8 @@ import { login as apiLogin, register as apiRegister, getToken } from "@/lib/api"
 interface AuthContextType {
   isAuthenticated: boolean;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, name: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
+  register: (email: string, name: string, password: string, username?: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -25,14 +25,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const accessToken = await apiLogin(email, password);
+  const login = async (identifier: string, password: string) => {
+    const accessToken = await apiLogin(identifier, password);
     setToken(accessToken);
     setIsAuthenticated(true);
   };
 
-  const register = async (email: string, name: string, password: string) => {
-    const accessToken = await apiRegister(email, name, password);
+  const register = async (email: string, name: string, password: string, username?: string) => {
+    const accessToken = await apiRegister(email, name, password, username);
     setToken(accessToken);
     setIsAuthenticated(true);
   };

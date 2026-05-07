@@ -10,6 +10,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,7 +20,7 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      await register(email, name, password);
+      await register(email, name, password, username || undefined);
       router.replace("/chat");
     } catch (err) {
       setError((err as Error).message);
@@ -44,10 +45,18 @@ export default function RegisterPage() {
           )}
           <input
             type="text"
-            placeholder="Full name"
+            placeholder="Họ và tên"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            className="w-full bg-input-bg border border-gray-600 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 outline-none focus:border-accent transition-colors"
+          />
+          <input
+            type="text"
+            placeholder="Tên đăng nhập (tuỳ chọn)"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
             className="w-full bg-input-bg border border-gray-600 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 outline-none focus:border-accent transition-colors"
           />
           <input

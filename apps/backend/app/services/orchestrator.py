@@ -22,6 +22,7 @@ from uuid import UUID
 
 import anthropic
 import httpx
+from anthropic import APIStatusError as AnthropicAPIStatusError
 from groq import APIStatusError as GroqAPIStatusError
 from groq import AsyncGroq
 from openai import APIStatusError, AsyncOpenAI, RateLimitError
@@ -41,7 +42,7 @@ from app.services.attachment_processor import build_message_content
 from app.services.context_window import apply_sliding_window
 from app.services.intent_classifier import Intent, classify_intent, intent_to_provider
 from app.services.memory import retrieve_memory_context
-from app.services.tools.web_search import SearchUnavailableError, web_search
+from app.services.tools.web_search import SearchUnavailableError, search_available, web_search
 
 # Failover priority (lower index = preferred after primary fails — EX-01)
 PROVIDER_FALLBACK_ORDER = ["openai", "anthropic", "groq"]
@@ -71,6 +72,14 @@ _GROQ_MODEL_ALIASES: dict[str, str] = {
 _NVIDIA_MODEL_ALIASES: dict[str, str] = {
     "meta/llama3-70b-instruct": "meta/llama-3.1-70b-instruct",  # EOL 2026-04-15
     "nvidia/nemotron-4-340b-instruct": "meta/llama-3.1-70b-instruct",
+}
+
+# Alias map: short/alternative OpenRouter model names → canonical slugs
+_OPENROUTER_MODEL_ALIASES: dict[str, str] = {
+    "gpt-oss-120":   "openai/gpt-oss-120b:free",
+    "gpt-oss-120b":  "openai/gpt-oss-120b:free",
+    "gpt-oss-20":    "openai/gpt-oss-20b:free",
+    "gpt-oss-20b":   "openai/gpt-oss-20b:free",
 }
 
 
@@ -104,6 +113,8 @@ def _normalize_model(provider: str, model: str) -> str:
         return _GROQ_MODEL_ALIASES.get(model, model)
     if provider == "nvidia":
         return _NVIDIA_MODEL_ALIASES.get(model, model)
+    if provider == "openrouter":
+        return _OPENROUTER_MODEL_ALIASES.get(model, model)
     return model
 
 
@@ -126,7 +137,7 @@ def _sse(payload: dict) -> str:
 # ── Provider streaming adapters ───────────────────────────────────────────────
 
 async def _stream_openai(messages: list[dict], model: str, api_key: str = "") -> AsyncGenerator[str, None]:
-    client = AsyncOpenAI(api_key=api_key or settings.OPENAI_API_KEY)
+    client = AsyncOpenAI(api_key=(api_key or settings.OPENAI_API_KEY).strip())
     prompt_tokens = completion_tokens = 0
 
     async with client.chat.completions.stream(
@@ -150,7 +161,7 @@ async def _stream_openai(messages: list[dict], model: str, api_key: str = "") ->
 
 
 async def _stream_groq(messages: list[dict], model: str, api_key: str = "") -> AsyncGenerator[str, None]:
-    client = AsyncGroq(api_key=api_key or settings.GROQ_API_KEY)
+    client = AsyncGroq(api_key=(api_key or settings.GROQ_API_KEY).strip())
     prompt_tokens = completion_tokens = 0
 
     try:
@@ -177,7 +188,7 @@ async def _stream_groq(messages: list[dict], model: str, api_key: str = "") -> A
 
 async def _stream_anthropic(messages: list[dict], model: str, api_key: str = "") -> AsyncGenerator[str, None]:
     from app.services.attachment_processor import openai_to_anthropic_content
-    client = anthropic.AsyncAnthropic(api_key=api_key or settings.ANTHROPIC_API_KEY)
+    client = anthropic.AsyncAnthropic(api_key=(api_key or settings.ANTHROPIC_API_KEY).strip())
     system_content = " ".join(
         (m["content"] if isinstance(m["content"], str) else "")
         for m in messages if m["role"] == "system"
@@ -292,7 +303,7 @@ async def _stream_openrouter(messages: list[dict], model: str, api_key: str = ""
     Model strings use the format "provider/model-name", e.g. "openai/gpt-4o".
     Video generation models use a separate /api/v1/videos endpoint with polling.
     """
-    key = api_key or settings.OPENROUTER_API_KEY
+    key = (api_key or settings.OPENROUTER_API_KEY).strip()
     if not key:
         raise ValueError("OpenRouter API key not configured. Set OPENROUTER_API_KEY or provide api_key in the request.")
 
@@ -337,7 +348,7 @@ async def _stream_nvidia(messages: list[dict], model: str, api_key: str = "") ->
     Model strings use the format "org/model-name", e.g. "meta/llama3-70b-instruct".
     TODO: For private/on-prem NIM endpoints, override NVIDIA_BASE_URL in .env.
     """
-    key = api_key or settings.NVIDIA_API_KEY
+    key = (api_key or settings.NVIDIA_API_KEY).strip()
     if not key:
         raise ValueError("NVIDIA API key not configured. Set NVIDIA_API_KEY or provide api_key in the request.")
 
@@ -427,8 +438,8 @@ async def stream_chat_completion(
     # ── STEP 4.3: Web Search Tool ─────────────────────────────────────────────
     search_context = ""
     # Use intent from classification (or skip if explicit provider with no web_search tool)
-    run_web_search = "web_search" in req.tools
-    if not req.provider:
+    run_web_search = "web_search" in req.tools and search_available()
+    if not req.provider and search_available():
         # Only check intent-based web search when we ran classification
         try:
             intent_obj = await classify_intent(last_user_msg, has_attachments)
@@ -519,14 +530,21 @@ async def stream_chat_completion(
                 break
             continue
 
-        except (RateLimitError, APIStatusError) as exc:
+        except (RateLimitError, APIStatusError, AnthropicAPIStatusError, GroqAPIStatusError) as exc:
             last_error = exc
             if req.provider:
                 # No failover for explicit provider — surface error immediately
                 break
             continue
+        except ValueError as exc:
+            # Configuration errors (missing API key, etc.) — no point retrying
+            last_error = exc
+            break
         except Exception as exc:
             last_error = exc
             break
 
-    yield _sse(SSEError(message=f"All providers failed: {last_error}").model_dump())
+    if req.provider:
+        yield _sse(SSEError(message=str(last_error)).model_dump())
+    else:
+        yield _sse(SSEError(message=f"All providers failed: {last_error}").model_dump())

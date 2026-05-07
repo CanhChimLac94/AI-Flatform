@@ -29,6 +29,7 @@ export default function ChatPage() {
 
   const handleConvUpdate = useCallback((id: string, title: string) => {
     setPendingTitleUpdate({ id, title });
+    setConvId((prev) => prev ?? id);
   }, []);
 
   const { messages, sendMessage, stop, clearMessages, loadHistory } = useChat(convId, activeAgentId, handleConvUpdate);

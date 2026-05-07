@@ -29,6 +29,7 @@ class Settings(BaseSettings):
 
     # Search
     TAVILY_API_KEY: str = ""
+    GOOGLE_CSE_ID: str = ""  # Google Custom Search Engine ID
 
     # Telegram
     TELEGRAM_BOT_TOKEN: str = ""

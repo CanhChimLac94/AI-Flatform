@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useI18n } from "@/contexts/I18nContext";
 
 const DAILY_LIMIT = 50_000;
 const STORAGE_KEY = "omni_daily_tokens";
@@ -10,6 +11,7 @@ interface QuotaMeterProps {
 }
 
 export function QuotaMeter({ collapsed = false }: QuotaMeterProps) {
+  const { t } = useI18n();
   const [used, setUsed] = useState(0);
 
   useEffect(() => {
@@ -26,13 +28,14 @@ export function QuotaMeter({ collapsed = false }: QuotaMeterProps) {
 
   const pct = Math.min(100, Math.round((used / DAILY_LIMIT) * 100));
   const remaining = Math.max(0, DAILY_LIMIT - used).toLocaleString("en-US");
+  const tooltip = t("quota.tooltip", "Daily quota: {remaining} tokens left ({pct}% used)", {
+    remaining,
+    pct,
+  });
 
   if (collapsed) {
     return (
-      <div
-        className="flex flex-col items-center gap-1 px-1"
-        title={`Daily quota: ${remaining} tokens left (${pct}% used)`}
-      >
+      <div className="flex flex-col items-center gap-1 px-1" title={tooltip}>
         <div className="w-8 h-1.5 bg-gray-700 rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all ${
@@ -48,8 +51,8 @@ export function QuotaMeter({ collapsed = false }: QuotaMeterProps) {
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-xs text-gray-500">
-        <span>Daily quota</span>
-        <span>{remaining} tokens left</span>
+        <span>{t("quota.daily")}</span>
+        <span>{t("quota.tokensLeft", "{count} tokens left", { count: remaining })}</span>
       </div>
       <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
         <div

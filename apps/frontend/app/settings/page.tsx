@@ -15,6 +15,7 @@ import {
   TrashIcon,
   ArrowTopRightOnSquareIcon,
   BoltIcon,
+  CpuChipIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -41,8 +42,21 @@ import {
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ProviderModelsSection } from "@/components/settings/ProviderModelsSection";
+import { useI18n } from "@/contexts/I18nContext";
 
 const TONE_OPTIONS = ["helpful", "formal", "casual", "concise", "creative"];
+
+type SettingsTab = "persona" | "models" | "api-keys";
+
+const SETTINGS_TABS: {
+  id: SettingsTab;
+  labelKey: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
+  { id: "persona", labelKey: "settings.tabs.persona", icon: UserCircleIcon },
+  { id: "models", labelKey: "settings.tabs.models", icon: CpuChipIcon },
+  { id: "api-keys", labelKey: "settings.tabs.apiKeys", icon: KeyIcon },
+];
 
 // ── Persona editor ────────────────────────────────────────────────────────────
 
@@ -746,7 +760,9 @@ function PreferenceSection({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const { isAuthenticated } = useAuth();
+  const { t } = useI18n();
+  const { isAuthenticated, isAdmin, isAuthReady } = useAuth();
+  const [activeTab, setActiveTab] = useState<SettingsTab>("persona");
 
   const [serverGroups, setServerGroups] = useState<ProviderKeyGroup[]>([]);
   const [loadingServer, setLoadingServer] = useState(false);
@@ -774,71 +790,123 @@ export default function SettingsPage() {
 
   return (
     <AppShell>
-      <PageHeader icon={KeyIcon} title="Settings" />
+      <PageHeader icon={KeyIcon} title={t("settings.title")} />
+
+      <div className="shrink-0 border-b border-gray-700 px-4 sm:px-6">
+        <div
+          role="tablist"
+          aria-label={t("settings.tabsAria")}
+          className="flex gap-1 -mb-px overflow-x-auto"
+        >
+          {SETTINGS_TABS.map(({ id, labelKey, icon: TabIcon }) => {
+            const selected = activeTab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => setActiveTab(id)}
+                className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 ${
+                  selected
+                    ? "border-blue-400 text-blue-300"
+                    : "border-transparent text-gray-500 hover:text-gray-300 hover:border-gray-600"
+                }`}
+              >
+                <TabIcon className="w-4 h-4 shrink-0" />
+                {t(labelKey)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-8">
+        <div
+          className={`mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-6 w-full ${
+            activeTab === "models" ? "max-w-6xl" : "max-w-2xl"
+          }`}
+        >
           {!isAuthenticated && (
             <p className="text-sm text-gray-400">
-              Settings are stored locally in your browser.{" "}
+              {t("settings.guestBanner")}{" "}
               <Link href="/auth/login" className="text-blue-400 hover:text-blue-300 underline">
-                Log in
+                {t("settings.guestBannerLogin")}
               </Link>{" "}
-              to save them securely on the server and sync across devices.
+              {t("settings.guestBannerSuffix")}
             </p>
           )}
 
-          <PersonaEditor isAuthenticated={isAuthenticated} />
-
-        <ProviderModelsSection isAuthenticated={isAuthenticated} />
-
-        {isAuthenticated ? (
-          <AuthPreferenceSection />
-        ) : (
-          <PreferenceSection
-            preferredProvider={guestSettings.preferredProvider}
-            preferredModelByProvider={guestSettings.preferredModelByProvider}
-            onChange={refresh}
-          />
-        )}
-
-        <div>
-          <h2 className="text-sm font-semibold text-gray-300 mb-4">API Keys</h2>
-          {isAuthenticated ? (
-            loadingServer ? (
-              <div className="space-y-4">
-                {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="h-24 rounded-xl bg-gray-800/50 animate-pulse" />
-                ))}
-              </div>
-            ) : serverError ? (
-              <p className="text-red-400 text-sm">{serverError}</p>
-            ) : (
-              <div className="space-y-4">
-                {[...serverGroups]
-                  .sort((a, b) => {
-                    const ai = PROVIDERS.findIndex((p) => p.id === a.provider);
-                    const bi = PROVIDERS.findIndex((p) => p.id === b.provider);
-                    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-                  })
-                  .map((g) => (
-                    <ServerApiKeyCard key={g.provider} group={g} onUpdated={reloadServerKeys} />
-                  ))}
-              </div>
-            )
-          ) : (
-            <div className="space-y-4">
-              {PROVIDERS.map((p) => (
-                <GuestApiKeyCard
-                  key={p.id}
-                  provider={p}
-                  savedKey={guestSettings.apiKeys[p.id] ?? ""}
-                  onUpdated={refresh}
+          {activeTab === "persona" && (
+            <div role="tabpanel" aria-label="Persona" className="space-y-6">
+              <p className="text-xs text-gray-400">
+                Tùy chỉnh persona, provider/model mặc định, ngôn ngữ và giọng điệu cho các cuộc hội thoại.
+              </p>
+              {isAuthenticated ? (
+                <AuthPreferenceSection />
+              ) : (
+                <PreferenceSection
+                  preferredProvider={guestSettings.preferredProvider}
+                  preferredModelByProvider={guestSettings.preferredModelByProvider}
+                  onChange={refresh}
                 />
-              ))}
+              )}
+              <PersonaEditor isAuthenticated={isAuthenticated} />
             </div>
           )}
-        </div>
+
+          {activeTab === "models" && (
+            <div role="tabpanel" aria-label="Model" className="space-y-6 w-full">
+              <ProviderModelsSection
+                canManage={isAuthenticated && isAdmin}
+                isAuthenticated={isAuthenticated}
+                isAuthReady={isAuthReady}
+                embedded
+              />
+            </div>
+          )}
+
+          {activeTab === "api-keys" && (
+            <div role="tabpanel" aria-label="API Keys" className="space-y-4">
+              <p className="text-xs text-gray-400">
+                Cấu hình API key cho từng provider. Key được mã hóa khi lưu trên server.
+              </p>
+              {isAuthenticated ? (
+                loadingServer ? (
+                  <div className="space-y-4">
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                      <div key={i} className="h-24 rounded-xl bg-gray-800/50 animate-pulse" />
+                    ))}
+                  </div>
+                ) : serverError ? (
+                  <p className="text-red-400 text-sm">{serverError}</p>
+                ) : (
+                  <div className="space-y-4">
+                    {[...serverGroups]
+                      .sort((a, b) => {
+                        const ai = PROVIDERS.findIndex((p) => p.id === a.provider);
+                        const bi = PROVIDERS.findIndex((p) => p.id === b.provider);
+                        return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+                      })
+                      .map((g) => (
+                        <ServerApiKeyCard key={g.provider} group={g} onUpdated={reloadServerKeys} />
+                      ))}
+                  </div>
+                )
+              ) : (
+                <div className="space-y-4">
+                  {PROVIDERS.map((p) => (
+                    <GuestApiKeyCard
+                      key={p.id}
+                      provider={p}
+                      savedKey={guestSettings.apiKeys[p.id] ?? ""}
+                      onUpdated={refresh}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
     </AppShell>

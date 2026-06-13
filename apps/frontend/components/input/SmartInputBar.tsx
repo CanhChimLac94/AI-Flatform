@@ -2,24 +2,47 @@
 
 import { useCallback, useRef, useState } from "react";
 import { PaperAirplaneIcon, StopIcon } from "@heroicons/react/24/solid";
-import { GlobeAltIcon } from "@heroicons/react/24/outline";
-import type { Attachment, AttachmentRef } from "@/lib/types";
+import type { Agent, Attachment, AttachmentRef, SystemAgent } from "@/lib/types";
 import { uploadFile } from "@/lib/api";
 import { AttachmentButton } from "./AttachmentButton";
 import { VoiceButton } from "./VoiceButton";
+import { ChatOptionsMenu, type ModelPref } from "@/components/chat/ChatOptionsMenu";
+import { useI18n } from "@/contexts/I18nContext";
 
 const MAX_CHARS = 4000;
-
-type ModelPref = "auto" | "speed" | "quality";
 
 interface SmartInputBarProps {
   onSend: (content: string, model: ModelPref, tools: string[], attachments: AttachmentRef[]) => void;
   onStop: () => void;
   isStreaming: boolean;
   disabled?: boolean;
+  agents?: Agent[];
+  systemAgents?: SystemAgent[];
+  activeAgentId?: string | null;
+  onSelectAgent?: (id: string | null) => void;
+  selectedProvider?: string;
+  selectedModel?: string;
+  onProviderChange?: (v: string) => void;
+  onModelChange?: (v: string) => void;
+  optionsDisabled?: boolean;
 }
 
-export function SmartInputBar({ onSend, onStop, isStreaming, disabled }: SmartInputBarProps) {
+export function SmartInputBar({
+  onSend,
+  onStop,
+  isStreaming,
+  disabled,
+  agents = [],
+  systemAgents = [],
+  activeAgentId = null,
+  onSelectAgent,
+  selectedProvider = "",
+  selectedModel = "",
+  onProviderChange,
+  onModelChange,
+  optionsDisabled = false,
+}: SmartInputBarProps) {
+  const { t } = useI18n();
   const [value, setValue] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [modelPref, setModelPref] = useState<ModelPref>("auto");
@@ -49,7 +72,7 @@ export function SmartInputBar({ onSend, onStop, isStreaming, disabled }: SmartIn
         refs = await Promise.all(attachments.map((a) => uploadFile(a.file)));
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Upload failed";
-        alert(`File upload error: ${msg}`);
+        alert(t("chat.uploadFailed", "File upload error: {message}", { message: msg }));
         setAttachments((prev) => prev.map((a) => ({ ...a, uploading: false })));
         setIsSending(false);
         return;
@@ -103,35 +126,30 @@ export function SmartInputBar({ onSend, onStop, isStreaming, disabled }: SmartIn
           onChange={(e) => { setValue(e.target.value.slice(0, MAX_CHARS)); autoResize(); }}
           onKeyDown={handleKeyDown}
           rows={1}
-          placeholder="Message AI Hub…"
+          placeholder={t("chat.inputPlaceholder")}
           disabled={isBusy}
           className="flex-1 bg-transparent resize-none outline-none text-sm text-gray-100 placeholder-gray-500 leading-relaxed py-1 max-h-[200px] overflow-y-auto"
         />
 
         {/* Right controls */}
         <div className="flex items-center gap-0.5 sm:gap-1 self-end pb-0.5 shrink-0 flex-wrap justify-end">
-          {/* Web search toggle */}
-          <button
-            type="button"
-            onClick={() => setWebSearch((v) => !v)}
-            title="Toggle web search"
-            className={`p-1.5 rounded-lg transition-colors ${
-              webSearch ? "text-accent bg-indigo-900/40" : "text-gray-500 hover:text-gray-300"
-            }`}
-          >
-            <GlobeAltIcon className="w-4 h-4" />
-          </button>
-
-          {/* Model preference selector */}
-          <select
-            value={modelPref}
-            onChange={(e) => setModelPref(e.target.value as ModelPref)}
-            className="hidden min-[480px]:block text-xs bg-transparent text-gray-500 border-none outline-none cursor-pointer hover:text-gray-300 max-w-[72px]"
-          >
-            <option value="auto">Auto</option>
-            <option value="speed">⚡ Speed</option>
-            <option value="quality">🧠 Quality</option>
-          </select>
+          {onProviderChange && onModelChange && onSelectAgent && (
+            <ChatOptionsMenu
+              modelPref={modelPref}
+              onModelPrefChange={setModelPref}
+              webSearch={webSearch}
+              onWebSearchChange={setWebSearch}
+              selectedProvider={selectedProvider}
+              selectedModel={selectedModel}
+              onProviderChange={onProviderChange}
+              onModelChange={onModelChange}
+              agents={agents}
+              systemAgents={systemAgents}
+              activeAgentId={activeAgentId}
+              onSelectAgent={onSelectAgent}
+              disabled={optionsDisabled || isBusy}
+            />
+          )}
 
           {/* Voice button */}
           <VoiceButton
@@ -144,7 +162,7 @@ export function SmartInputBar({ onSend, onStop, isStreaming, disabled }: SmartIn
             <button
               onClick={onStop}
               className="p-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors"
-              title="Stop generating"
+              title={t("chat.stopGenerating")}
             >
               <StopIcon className="w-4 h-4" />
             </button>

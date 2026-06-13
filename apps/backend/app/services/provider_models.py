@@ -24,29 +24,32 @@ async def ensure_provider_seeded(
 ) -> list[UserProviderModel]:
     repo = UserProviderModelRepository(db)
     existing = await repo.list_for_provider(user_id, provider)
-    if existing:
-        return existing
+    existing_ids = {row.model_id for row in existing}
 
     registry_models = get_models(provider)
     if not registry_models:
-        return []
+        return existing
 
-    created: list[UserProviderModel] = []
-    for idx, model_id in enumerate(registry_models):
-        row = UserProviderModel(
-            user_id=user_id,
-            provider=provider,
-            model_id=model_id,
-            display_name=None,
-            is_enabled=True,
-            is_builtin=True,
-            sort_order=idx,
+    missing = [m for m in registry_models if m not in existing_ids]
+    if not missing:
+        return existing
+
+    base_order = len(existing)
+    for offset, model_id in enumerate(missing):
+        db.add(
+            UserProviderModel(
+                user_id=user_id,
+                provider=provider,
+                model_id=model_id,
+                display_name=None,
+                is_enabled=True,
+                is_builtin=True,
+                sort_order=base_order + offset,
+            )
         )
-        db.add(row)
-        created.append(row)
 
-    await db.flush()
-    return created
+    await db.commit()
+    return await repo.list_for_provider(user_id, provider)
 
 
 async def ensure_all_providers_seeded(db: AsyncSession, user_id: UUID) -> None:
@@ -87,15 +90,3 @@ async def enabled_model_ids(
 ) -> list[str]:
     rows = await ensure_provider_seeded(db, user_id, provider)
     return [r.model_id for r in rows if r.is_enabled]
-
-
-def entry_to_dict(row: UserProviderModel) -> dict:
-    return {
-        "id": row.id,
-        "provider": row.provider,
-        "model_id": row.model_id,
-        "display_name": row.display_name,
-        "is_enabled": row.is_enabled,
-        "is_builtin": row.is_builtin,
-        "sort_order": row.sort_order,
-    }

@@ -1,0 +1,101 @@
+---
+description: Multi-language (i18n) standards for frontend — EN/VI via I18nContext
+globs: apps/frontend/**/*.{tsx,ts,json}
+alwaysApply: false
+---
+
+# Multi-language (i18n)
+
+The app supports **English (`en`)** and **Vietnamese (`vi`)** via `I18nContext` (`contexts/I18nContext.tsx`). Locale is stored in `localStorage` (`aichat.locale`) and switched from **AppUserMenu**.
+
+**Do not** hardcode user-visible UI strings in components or pages. **Do not** mix EN and VI in the same screen.
+
+## Message files
+
+- `apps/frontend/messages/en.json` — English (source of truth for keys)
+- `apps/frontend/messages/vi.json` — Vietnamese (must mirror `en.json` key structure)
+
+Add keys to **both** files in the same commit. Use nested namespaces:
+
+| Namespace | Use for |
+|-----------|---------|
+| `nav.*` | Sidebar navigation |
+| `layout.*` | App shell, user menu, mobile chrome |
+| `chat.*` | Chat page, input, options menu |
+| `auth.*` | Login / register |
+| `settings.*` | Settings tabs and sections |
+| `agents.*` | Agents pages and forms |
+| `flows.*` | Flow list, designer, modals |
+| `common.*` | Shared actions (save, cancel, delete…) |
+| `errors.*` | Generic error fallbacks |
+
+## Usage in components
+
+```tsx
+import { useI18n } from "@/contexts/I18nContext";
+
+export function MyComponent() {
+  const { t } = useI18n();
+
+  return (
+    <>
+      <h1>{t("agents.title")}</h1>
+      <p>{t("flows.deleteConfirmBody", "Flow {name} will be deleted.", { name: flowName })}</p>
+    </>
+  );
+}
+```
+
+### Rules
+
+1. **Every user-visible string** (labels, placeholders, `title`, `aria-label`, empty states, buttons, toasts, confirm dialogs) must use `t(key, fallback)`.
+2. **Fallback** (`defaultValue`) is required when adding new keys — aids dev before JSON is complete.
+3. **Interpolation**: use `{var}` in JSON and pass `vars` as third argument to `t()`.
+4. **Page headers**: `PageHeader title={t("settings.title")}` — never pass raw English/Vietnamese literals.
+5. **Dynamic lists**: use `labelKey` in config arrays, resolve with `t(labelKey)` at render time.
+6. **`locale` prop**: only when formatting dates/numbers; UI text still goes through `t()`.
+7. **Backend error messages**: may stay as returned from API; wrap only UI chrome around them.
+
+## Provider setup
+
+`I18nProvider` wraps the app in `app/layout.tsx`. All client pages/components under it can call `useI18n()`.
+
+`document.documentElement.lang` is synced automatically when locale changes.
+
+## Adding a new feature — checklist
+
+- [ ] Identified all user-visible strings in the new UI
+- [ ] Added keys to `en.json` and `vi.json` (same structure)
+- [ ] Component/page uses `useI18n()` and `t()` — no hardcoded EN/VI
+- [ ] `title` / `aria-label` / `placeholder` translated
+- [ ] Tested with locale **EN** and **VI** (AppUserMenu → Ngôn ngữ)
+- [ ] Empty states and error fallbacks translated
+
+## Known gaps (migrate when touching a file)
+
+These areas may still contain hardcoded strings — **wire i18n when you edit them**:
+
+- Flow Designer (`FlowEditor.tsx`, node palette, status labels)
+- Settings detail sections (persona editor, API keys UI, `ProviderModelsSection`)
+- Agent forms/cards (`AgentForm`, `SystemAgentForm`, `CategoryManager`)
+- System agents pages (`agents/system/*`)
+- Chat message actions (`MessageBubble`, `ActionButtons`)
+
+When migrating a file, convert **all** strings in that file in one pass, not piecemeal.
+
+## Anti-patterns
+
+```tsx
+// ❌ Hardcoded
+<button>Lưu flow</button>
+
+// ❌ Mixed locale
+<h1>Settings</h1>
+<p>Cài đặt được lưu cục bộ</p>
+
+// ❌ Locale branching for labels
+{locale === "vi" ? "Hủy" : "Cancel"}
+
+// ✅ Correct
+<button>{t("common.save")}</button>
+```

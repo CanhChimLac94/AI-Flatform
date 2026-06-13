@@ -17,6 +17,7 @@ import {
   refreshAccessToken,
   setAccessToken,
 } from "./authSession";
+import { randomUUID } from "./randomId";
 
 // Always use the relative /api prefix — works in both browser and server contexts.
 // Next.js rewrites /api/* → backend internally (see next.config.ts).
@@ -492,7 +493,7 @@ export async function buildChatStream(body: ChatRequest): Promise<{ url: string;
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        "X-Request-Id": crypto.randomUUID(),
+        "X-Request-Id": randomUUID(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify(body),

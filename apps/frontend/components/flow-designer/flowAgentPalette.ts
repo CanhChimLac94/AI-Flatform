@@ -19,22 +19,22 @@ export interface FlowAgentCategoryGroup {
 }
 
 const CATEGORY_ICON_COLOR: Record<string, string> = {
-  indigo: "text-indigo-300",
-  cyan: "text-cyan-300",
-  pink: "text-pink-300",
-  purple: "text-purple-300",
-  amber: "text-amber-300",
-  emerald: "text-emerald-300",
-  blue: "text-blue-300",
-  rose: "text-rose-300",
+  indigo: "text-indigo-700 dark:text-indigo-300",
+  cyan: "text-cyan-700 dark:text-cyan-300",
+  pink: "text-pink-700 dark:text-pink-300",
+  purple: "text-purple-700 dark:text-purple-300",
+  amber: "text-amber-700 dark:text-amber-300",
+  emerald: "text-emerald-700 dark:text-emerald-300",
+  blue: "text-blue-700 dark:text-blue-300",
+  rose: "text-rose-700 dark:text-rose-300",
 };
 
 export function resolveFlowAgentIconColor(agent: FlowPaletteAgent): string {
-  if (agent.source === "sample") return "text-blue-300";
+  if (agent.source === "sample") return "text-blue-700 dark:text-blue-300";
   const catColor = agent.categories?.[0]?.color;
-  if (catColor) return CATEGORY_ICON_COLOR[catColor] ?? "text-purple-300";
-  if (agent.source === "user") return "text-emerald-300";
-  return "text-purple-300";
+  if (catColor) return CATEGORY_ICON_COLOR[catColor] ?? "text-purple-700 dark:text-purple-300";
+  if (agent.source === "user") return "text-emerald-700 dark:text-emerald-300";
+  return "text-purple-700 dark:text-purple-300";
 }
 
 export function agentToPaletteItem(agent: Agent, source: FlowAgentSource = "user"): FlowPaletteAgent {

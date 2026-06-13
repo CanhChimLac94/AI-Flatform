@@ -238,8 +238,11 @@ def get_provider(provider_id: str) -> ProviderInfo | None:
 
 
 def get_models(provider_id: str) -> list[str]:
+    """Return registry models for a provider, preserving order and dropping duplicates."""
     info = REGISTRY.get(provider_id)
-    return info["models"] if info else []
+    if not info:
+        return []
+    return list(dict.fromkeys(info["models"]))
 
 
 def get_default_model(provider_id: str) -> str:

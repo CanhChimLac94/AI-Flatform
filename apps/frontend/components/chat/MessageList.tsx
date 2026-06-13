@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { Message } from "@/lib/types";
 import { MessageBubble } from "./MessageBubble";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface MessageListProps {
   messages: Message[];
@@ -10,6 +11,7 @@ interface MessageListProps {
 }
 
 export function MessageList({ messages, onRegenerate }: MessageListProps) {
+  const { t } = useI18n();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom as new content streams in
@@ -21,9 +23,9 @@ export function MessageList({ messages, onRegenerate }: MessageListProps) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center px-8 gap-4">
         <div className="text-5xl">✨</div>
-        <h2 className="text-xl font-semibold text-gray-200">How can I help you today?</h2>
+        <h2 className="text-xl font-semibold text-gray-200">{t("chat.emptyTitle")}</h2>
         <p className="text-gray-500 text-sm max-w-sm">
-          Ask me anything. I can search the web, analyze files, write code, and remember our past conversations.
+          {t("chat.emptySubtitle")}
         </p>
       </div>
     );

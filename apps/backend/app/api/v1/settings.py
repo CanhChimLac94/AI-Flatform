@@ -25,7 +25,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import get_current_user, get_optional_user
+from app.api.dependencies import get_current_user, get_optional_user, get_admin_user
 from app.db.session import get_db
 from app.models.user import User
 from app.models.user_api_key import SUPPORTED_PROVIDERS
@@ -438,7 +438,7 @@ async def get_provider_models(
     """Returns enabled models for the user catalog, or static registry for guests."""
     if provider_id not in REGISTRY:
         raise HTTPException(status_code=404, detail=f"Unknown provider: {provider_id}")
-    if current_user is not None:
+    if current_user is not None and current_user.is_admin:
         return await enabled_model_ids(db, current_user.id, provider_id)
     return get_models(provider_id)
 
@@ -447,7 +447,7 @@ async def get_provider_models(
 
 @router.get("/provider-models", response_model=list[ProviderModelGroupOut])
 async def list_all_provider_models(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
     groups = await list_provider_groups(db, current_user.id)
@@ -464,7 +464,7 @@ async def list_all_provider_models(
 @router.get("/provider-models/{provider}", response_model=ProviderModelGroupOut)
 async def list_provider_model_entries(
     provider: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
     _validate_provider(provider)
@@ -485,7 +485,7 @@ async def list_provider_model_entries(
 async def create_provider_model(
     provider: str,
     body: CreateProviderModelRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
     _validate_provider(provider)
@@ -515,7 +515,7 @@ async def update_provider_model(
     provider: str,
     entry_id: UUID,
     body: UpdateProviderModelRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
     _validate_provider(provider)
@@ -525,8 +525,6 @@ async def update_provider_model(
         raise HTTPException(status_code=404, detail="Model entry not found")
 
     if body.model_id is not None:
-        if row.is_builtin:
-            raise HTTPException(status_code=400, detail="Cannot change model_id of a built-in entry")
         if body.model_id != row.model_id:
             conflict = await repo.get_by_model_id(current_user.id, provider, body.model_id)
             if conflict:
@@ -547,7 +545,7 @@ async def update_provider_model(
 async def delete_provider_model(
     provider: str,
     entry_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
     _validate_provider(provider)
@@ -555,11 +553,6 @@ async def delete_provider_model(
     row = await repo.get_for_user(current_user.id, entry_id)
     if not row or row.provider != provider:
         raise HTTPException(status_code=404, detail="Model entry not found")
-    if row.is_builtin:
-        raise HTTPException(
-            status_code=400,
-            detail="Built-in models cannot be deleted; disable them instead",
-        )
 
     await repo.delete_for_user(current_user.id, entry_id)
     await db.commit()

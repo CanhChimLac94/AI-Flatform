@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from redis.exceptions import ConnectionError as RedisConnectionError
 from sqlalchemy import text
-from sqlalchemy.exc import DBAPIError, OperationalError
+from sqlalchemy.exc import DBAPIError, IntegrityError, OperationalError
 
 from app.api.v1.router import api_router
 from app.core.config import settings
@@ -83,9 +83,19 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(IntegrityError)
+async def integrity_error_handler(_request: Request, exc: IntegrityError):
+    logger.warning("Database integrity error: %s", exc.orig)
+    return JSONResponse(
+        status_code=409,
+        content={"detail": "Data conflict. Please refresh and try again."},
+    )
+
+
 @app.exception_handler(OperationalError)
 @app.exception_handler(DBAPIError)
-async def database_unavailable_handler(_request: Request, _exc: Exception):
+async def database_unavailable_handler(_request: Request, exc: Exception):
+    logger.warning("Database unavailable: %s", exc)
     return JSONResponse(
         status_code=503,
         content={"detail": "Database temporarily unavailable. Please retry shortly."},

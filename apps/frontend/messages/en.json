@@ -1,12 +1,51 @@
 {
+  "app": {
+    "brand": "AI Hub",
+    "loading": "Loading…"
+  },
   "nav": {
     "chat": "Chat",
     "agents": "Agents",
+    "flow": "Flow",
     "settings": "Settings",
     "logout": "Logout"
   },
+  "layout": {
+    "sidebar": {
+      "expand": "Expand sidebar",
+      "collapse": "Collapse sidebar",
+      "close": "Close menu",
+      "newChat": "New chat",
+      "guestPrompt": "Sign in to save conversation history, sync settings, and create personal agents. Use the menu in the top-right corner to sign in.",
+      "noConversations": "No conversations yet. Start chatting!",
+      "newConversation": "New conversation",
+      "rename": "Rename",
+      "delete": "Delete"
+    },
+    "userMenu": {
+      "ariaLabel": "Account and settings menu",
+      "settings": "Settings",
+      "language": "Language",
+      "theme": "Theme",
+      "english": "English",
+      "vietnamese": "Vietnamese",
+      "dark": "Dark",
+      "light": "Light",
+      "logout": "Log out",
+      "login": "Sign in",
+      "register": "Create account",
+      "account": "Account",
+      "guest": "Guest"
+    },
+    "mobile": {
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu"
+    }
+  },
   "chat": {
     "title": "Chat",
+    "conversation": "Conversation",
+    "newConversation": "New conversation",
     "newChat": "New Chat",
     "provider": "Provider",
     "model": "Model",
@@ -19,10 +58,31 @@
     "typing": "Typing...",
     "loading": "Loading...",
     "noMessages": "No messages yet. Start a conversation!",
+    "emptyTitle": "How can I help you today?",
+    "emptySubtitle": "Ask me anything. I can search the web, analyze files, write code, and remember our past conversations.",
     "deleteChat": "Delete Chat",
     "confirmDelete": "Are you sure you want to delete this chat?",
     "error": "An error occurred",
-    "retryMessage": "Retry"
+    "retryMessage": "Retry",
+    "inputPlaceholder": "Message AI Hub…",
+    "stopGenerating": "Stop generating",
+    "uploadFailed": "File upload error: {message}",
+    "options": {
+      "title": "Chat options",
+      "responseMode": "Response mode",
+      "channel": "Channel",
+      "agent": "Agent",
+      "tools": "Tools",
+      "noAgent": "No agent",
+      "personal": "Personal",
+      "system": "System",
+      "webSearch": "Web search"
+    },
+    "modelPref": {
+      "auto": "Auto",
+      "speed": "Speed",
+      "quality": "Quality"
+    }
   },
   "providers": {
     "openai": "OpenAI",
@@ -46,16 +106,39 @@
     "email": "Email",
     "password": "Password",
     "confirmPassword": "Confirm Password",
-    "signIn": "Sign In",
-    "signUp": "Sign Up",
+    "signIn": "Sign in",
+    "signUp": "Sign up",
     "forgotPassword": "Forgot Password?",
     "noAccount": "No account?",
     "hasAccount": "Already have an account?",
     "loginSuccess": "Login successful",
-    "registerSuccess": "Registration successful"
+    "registerSuccess": "Registration successful",
+    "welcomeBack": "Welcome back",
+    "signInSubtitle": "Sign in to AI Hub",
+    "createAccount": "Create account",
+    "registerSubtitle": "Join AI Hub — free to start",
+    "fullName": "Full name",
+    "usernameOptional": "Username (optional)",
+    "identifier": "Email or username",
+    "continueAsGuest": "Continue without signing in",
+    "or": "or",
+    "signingIn": "Signing in…",
+    "creatingAccount": "Creating account…",
+    "getStarted": "Get started",
+    "createOne": "Create one",
+    "passwordMin": "Password (min 8 chars)"
   },
   "settings": {
     "title": "Settings",
+    "tabsAria": "Settings",
+    "tabs": {
+      "persona": "Persona",
+      "models": "Model",
+      "apiKeys": "API Keys"
+    },
+    "guestBanner": "Settings are stored locally in your browser.",
+    "guestBannerLogin": "Log in",
+    "guestBannerSuffix": "to save them securely on the server and sync across devices.",
     "language": "Language",
     "defaultProvider": "Default Provider",
     "defaultModel": "Default Model",
@@ -68,7 +151,10 @@
   },
   "agents": {
     "title": "Agents",
-    "newAgent": "New Agent",
+    "guestBadge": "Guest — saved locally",
+    "systemLibrary": "System library",
+    "manageFlows": "Manage flows",
+    "newAgent": "New agent",
     "name": "Name",
     "description": "Description",
     "systemPrompt": "System Prompt",
@@ -78,7 +164,59 @@
     "create": "Create",
     "edit": "Edit",
     "delete": "Delete",
-    "noAgents": "No agents yet"
+    "noAgents": "No agents yet",
+    "noAgentsHint": "Create your first agent to get started.",
+    "createFirst": "Create first agent",
+    "deleteConfirm": "Delete agent?",
+    "personal": "Personal",
+    "systemTitle": "System agents",
+    "manage": "Manage",
+    "manageTitle": "Manage system agents",
+    "admin": "Admin",
+    "categoriesTab": "Categories",
+    "library": "Library",
+    "newSystemAgent": "New agent",
+    "checkingPermission": "Checking permissions…"
+  },
+  "flows": {
+    "manage": "Manage flows",
+    "guestBadge": "Guest — saved locally",
+    "newFlow": "New flow",
+    "createFirst": "Create first flow",
+    "noFlows": "No flows yet",
+    "noFlowsHint": "Create AI agent workflows with Flow Designer and save them to your account.",
+    "deleteConfirm": "Delete flow?",
+    "deleteConfirmBody": "Flow {name} will be permanently deleted.",
+    "designerLoading": "Loading Flow Designer…",
+    "editInfo": "Edit info",
+    "duplicate": "Duplicate",
+    "delete": "Delete flow",
+    "runNow": "Run now",
+    "running": "Running…",
+    "viewResults": "View results",
+    "schedule": "Schedule run",
+    "connections": "connections",
+    "nodes": "nodes",
+    "openDesigner": "Open designer",
+    "sectionRun": "Run",
+    "viewResultsLatest": "View latest run results",
+    "menuSettings": "Settings",
+    "autoSaveTitle": "Auto-save",
+    "autoSaveOff": "Off",
+    "autoSave1m": "Every 1 minute",
+    "autoSave3m": "Every 3 minutes",
+    "autoSave5m": "Every 5 minutes",
+    "autoSaveCustom": "Custom interval",
+    "autoSaveCustomMinutes": "Interval (minutes)",
+    "autoSaveMinutesUnit": "min",
+    "autoSaveHint": "Saves only when the flow has changed.",
+    "autoSaving": "Auto-saving…",
+    "autoSaved": "Auto-saved"
+  },
+  "quota": {
+    "daily": "Daily quota",
+    "tokensLeft": "{count} tokens left",
+    "tooltip": "Daily quota: {remaining} tokens left ({pct}% used)"
   },
   "common": {
     "ok": "OK",
@@ -94,5 +232,11 @@
     "success": "Success",
     "warning": "Warning",
     "info": "Info"
+  },
+  "errors": {
+    "loadFailed": "Failed to load",
+    "saveFailed": "Save failed",
+    "deleteFailed": "Delete failed",
+    "duplicateFailed": "Duplicate failed"
   }
 }

@@ -1,0 +1,77 @@
+---
+description: Theme (dark/light) standards — use CSS variables and semantic tokens
+globs: apps/frontend/**/*.{tsx,css}
+alwaysApply: false
+---
+
+# Theme (Dark / Light)
+
+The app supports **dark** (default) and **light** via `ThemeContext` (`contexts/ThemeContext.tsx`). Users switch in **AppUserMenu → Giao diện**.
+
+`ThemeProvider` sets `data-theme` and `dark`/`light` class on `<html>`. Theme persists in `localStorage` (`aichat.theme`).
+
+## Design tokens (use these)
+
+Defined in `app/globals.css` and exposed in `tailwind.config.ts`:
+
+| Token | Tailwind | Use for |
+|-------|----------|---------|
+| `--color-chat-bg` | `bg-chat-bg` | Page / shell background |
+| `--color-sidebar` | `bg-sidebar` | Sidebar |
+| `--color-input-bg` | `bg-input-bg` | Inputs, composer |
+| `--color-surface` | `bg-surface` | Cards, panels |
+| `--color-surface-muted` | `bg-surface-muted` | Nested surfaces |
+| `--color-surface-elevated` | `bg-surface-elevated` | Raised controls |
+| `--color-border` | `border-border` | Borders |
+| `--color-text` | `text-foreground` | Primary text |
+| `--color-text-muted` | `text-muted` | Secondary text |
+| `--color-on-accent` | `text-on-accent` | Text on accent buttons |
+| `--color-overlay` | `bg-overlay` | Modal / drawer backdrops |
+
+## Rules for new UI
+
+1. **Prefer semantic tokens** (`bg-surface`, `text-foreground`, `border-border`) over hardcoded hex (`#1a1a1a`) or fixed grays that ignore theme.
+2. **Shell pages** (chat, agents, settings, auth): use `bg-chat-bg`, `bg-sidebar`, `bg-input-bg` — already theme-aware.
+3. **Cards / modals**: `bg-gray-900` / `bg-gray-800` (including `/50` opacity) are remapped in light mode via `globals.css` — acceptable for existing patterns; prefer `bg-surface` for new code.
+4. **Primary buttons**: `bg-accent hover:bg-accent-hover text-on-accent` (or `text-white` on accent — preserved in light mode).
+5. **Never** use blanket `text-white` on large neutral panels without a gray/surface background parent — use `text-foreground`.
+6. **Modal backdrop**: `bg-overlay` or `bg-black/60` (both work).
+7. **Do not** use `dark:` Tailwind variants alone — theme is driven by `data-theme`, not system preference. Use CSS variables or `[data-theme="light"]` overrides in `globals.css` when needed.
+8. **Do not** use opacity modifiers on semantic tokens (`bg-surface-muted/90`) — Tailwind cannot apply `/90` to plain CSS variables. Use solid `bg-input-bg`, `bg-surface`, etc.
+9. **Accent colors** (icons, badges) on surfaces that change with theme: use dual shades — e.g. `text-blue-700 dark:text-blue-400` (readable on white in light, on dark panels in dark). Avoid `text-*-300` / `text-*-400` alone on `bg-surface` in light mode.
+10. **Test both themes** before shipping: AppUserMenu → Dark / Light.
+
+## Flow Designer
+
+The flow designer follows the app theme (dark / light). Use semantic tokens for sidebar, toolbar, nodes, and palette items. React Flow `colorMode` and canvas dot color are driven by `useTheme()` in `FlowEditor`.
+
+## Adding a new feature — checklist
+
+- [ ] No hardcoded hex backgrounds for standard UI (except flow canvas)
+- [ ] Text uses `text-foreground` / `text-muted` or gray classes covered by light overrides
+- [ ] Borders use `border-border` or `border-gray-700` (remapped in light)
+- [ ] Accent buttons use `text-on-accent` or `text-white` on colored `bg-*`
+- [ ] Backdrops use `bg-overlay`
+- [ ] Verified in **dark** and **light** mode
+
+## Anti-patterns
+
+```tsx
+// ❌ Hardcoded dark-only
+<div className="bg-[#1a1a1a] text-white/70" />
+
+// ❌ System dark: variant (not wired to app theme)
+<div className="dark:bg-gray-900" />
+
+// ❌ White text on neutral card without surface context
+<div className="bg-white text-white" />
+
+// ✅ Theme-aware
+<div className="bg-surface border border-border text-foreground" />
+<button className="bg-accent text-on-accent">Save</button>
+<div className="fixed inset-0 bg-overlay" />
+```
+
+## Extending light theme
+
+If a new component uses Tailwind grays not yet remapped, add targeted rules to `globals.css` under `[data-theme="light"]` **or** migrate the component to semantic tokens (preferred).

@@ -8,6 +8,7 @@ import {
 import type { SystemAgent } from "@/lib/types";
 import { CategoryBadge } from "./CategoryBadge";
 import { AgentIcon } from "./AgentIcon";
+import { agentIconContainerClass, AGENT_TOOL_BADGE_CLASS } from "./agentIconVisual";
 
 interface Props {
   agent: SystemAgent;
@@ -19,7 +20,7 @@ interface Props {
 
 export function SystemAgentCard({ agent, isAdmin, onDuplicate, onEdit, onDelete }: Props) {
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 flex flex-col gap-3 hover:border-gray-600 transition-colors">
+    <div className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-3 hover:border-emerald-500/30 transition-colors">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 min-w-0">
@@ -27,13 +28,13 @@ export function SystemAgentCard({ agent, isAdmin, onDuplicate, onEdit, onDelete 
               icon={agent.icon}
               name={agent.name}
               categories={agent.categories}
-              containerClassName="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-900/30 border border-emerald-800/50 shrink-0"
-              className="w-4 h-4 text-emerald-400"
+              containerClassName={agentIconContainerClass(agent.categories, "system")}
+              className="w-4 h-4"
             />
-            <h3 className="text-sm font-semibold text-white truncate">{agent.name}</h3>
+            <h3 className="text-sm font-semibold text-foreground truncate">{agent.name}</h3>
           </div>
           {agent.description && (
-            <p className="text-xs text-gray-400 mt-1 line-clamp-2">{agent.description}</p>
+            <p className="text-xs text-muted mt-1 line-clamp-2">{agent.description}</p>
           )}
         </div>
 
@@ -41,7 +42,7 @@ export function SystemAgentCard({ agent, isAdmin, onDuplicate, onEdit, onDelete 
           {onDuplicate && (
             <button
               onClick={() => onDuplicate(agent)}
-              className="p-1.5 text-gray-500 hover:text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
+              className="p-1.5 text-muted hover:text-foreground rounded-lg hover:bg-surface-hover transition-colors"
               title="Sao chép vào agents cá nhân"
             >
               <DocumentDuplicateIcon className="w-4 h-4" />
@@ -50,7 +51,7 @@ export function SystemAgentCard({ agent, isAdmin, onDuplicate, onEdit, onDelete 
           {isAdmin && onEdit && (
             <button
               onClick={() => onEdit(agent)}
-              className="p-1.5 text-gray-500 hover:text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
+              className="p-1.5 text-muted hover:text-foreground rounded-lg hover:bg-surface-hover transition-colors"
               title="Chỉnh sửa"
             >
               <PencilIcon className="w-4 h-4" />
@@ -59,7 +60,7 @@ export function SystemAgentCard({ agent, isAdmin, onDuplicate, onEdit, onDelete 
           {isAdmin && onDelete && (
             <button
               onClick={() => onDelete(agent)}
-              className="p-1.5 text-gray-500 hover:text-red-400 rounded-lg hover:bg-red-900/20 transition-colors"
+              className="p-1.5 text-muted hover:text-red-500 rounded-lg hover:bg-red-500/10 transition-colors"
               title="Xóa"
             >
               <TrashIcon className="w-4 h-4" />
@@ -77,22 +78,19 @@ export function SystemAgentCard({ agent, isAdmin, onDuplicate, onEdit, onDelete 
       )}
 
       {agent.system_prompt && (
-        <p className="text-xs text-gray-500 font-mono bg-gray-900/50 rounded-lg px-3 py-2 line-clamp-2 border border-gray-700/50">
+        <p className="text-xs text-muted font-mono bg-surface-muted rounded-lg px-3 py-2 line-clamp-2 border border-border">
           {agent.system_prompt}
         </p>
       )}
 
       <div className="flex flex-wrap items-center gap-2 mt-auto pt-1">
         {agent.model && (
-          <span className="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded-full">
+          <span className="text-xs bg-surface-elevated text-muted border border-border px-2 py-0.5 rounded-full">
             {agent.model}
           </span>
         )}
         {agent.tools.map((t) => (
-          <span
-            key={t}
-            className="text-xs bg-blue-900/30 text-blue-400 border border-blue-800/50 px-2 py-0.5 rounded-full"
-          >
+          <span key={t} className={AGENT_TOOL_BADGE_CLASS}>
             {t}
           </span>
         ))}

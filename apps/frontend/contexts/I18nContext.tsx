@@ -20,10 +20,17 @@ function getNestedValue(obj: unknown, key: string): string | undefined {
   return typeof current === "string" ? current : undefined;
 }
 
+function interpolate(template: string, vars?: Record<string, string | number>): string {
+  if (!vars) return template;
+  return template.replace(/\{(\w+)\}/g, (_, key: string) =>
+    vars[key] !== undefined ? String(vars[key]) : `{${key}}`,
+  );
+}
+
 interface I18nContextType {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: string, defaultValue?: string) => string;
+  t: (key: string, defaultValue?: string, vars?: Record<string, string | number>) => string;
 }
 
 const I18nContext = createContext<I18nContextType>({
@@ -48,11 +55,16 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (key: string, defaultValue = ""): string => {
-      return getNestedValue(MESSAGES[locale], key) ?? defaultValue;
+    (key: string, defaultValue = "", vars?: Record<string, string | number>): string => {
+      const raw = getNestedValue(MESSAGES[locale], key) ?? defaultValue;
+      return interpolate(raw, vars);
     },
     [locale]
   );
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   return (
     <I18nContext.Provider value={{ locale, setLocale, t }}>

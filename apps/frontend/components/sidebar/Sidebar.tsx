@@ -7,7 +7,6 @@ import {
   PlusIcon,
   TrashIcon,
   ChatBubbleLeftIcon,
-  Cog6ToothIcon,
   UserCircleIcon,
   CpuChipIcon,
   PencilIcon,
@@ -16,34 +15,26 @@ import {
   Squares2X2Icon,
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
-  ArrowRightStartOnRectangleIcon,
-  ServerStackIcon,
 } from "@heroicons/react/24/outline";
 import type { Conversation } from "@/lib/types";
 import { createConversation, deleteConversation, fetchConversations, renameConversation } from "@/lib/api";
 import { QuotaMeter } from "./QuotaMeter";
 import { useAuth } from "@/contexts/AuthContext";
+import { useI18n } from "@/contexts/I18nContext";
 
 const SIDEBAR_COLLAPSED_KEY = "omni_sidebar_collapsed";
 
 const NAV_ITEMS = [
-  { href: "/chat", label: "Chat", icon: ChatBubbleLeftIcon, match: (path: string) => path === "/chat" },
-  { href: "/settings", label: "Settings", icon: Cog6ToothIcon, match: (path: string) => path === "/settings" },
+  { href: "/chat", labelKey: "nav.chat", icon: ChatBubbleLeftIcon, match: (path: string) => path === "/chat" },
   {
     href: "/agents",
-    label: "Agents",
+    labelKey: "nav.agents",
     icon: CpuChipIcon,
     match: (path: string) => path === "/agents",
   },
   {
-    href: "/agents/system",
-    label: "Thư viện",
-    icon: ServerStackIcon,
-    match: (path: string) => path.startsWith("/agents/system"),
-  },
-  {
     href: "/agents/flows",
-    label: "Flow",
+    labelKey: "nav.flow",
     icon: Squares2X2Icon,
     match: (path: string) => path.startsWith("/agents/flow") || path === "/agents/flows",
   },
@@ -74,7 +65,8 @@ export function Sidebar({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const editInputRef = useRef<HTMLInputElement>(null);
-  const { isAuthenticated, isAuthReady, logout } = useAuth();
+  const { isAuthenticated, isAuthReady } = useAuth();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (pathname.startsWith("/agents/flow/") || pathname === "/agents/flow") {
@@ -213,8 +205,8 @@ export function Sidebar({
             <button
               onClick={toggleCollapsed}
               className="p-1.5 rounded-md hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
-              title="Mở rộng menu"
-              aria-label="Expand sidebar"
+              title={t("layout.sidebar.expand")}
+              aria-label={t("layout.sidebar.expand")}
             >
               <ChevronDoubleRightIcon className="w-4 h-4" />
             </button>
@@ -223,7 +215,7 @@ export function Sidebar({
             <Link
               href="/chat"
               className="w-8 h-8 flex items-center justify-center rounded-md text-white font-bold text-xs bg-accent/20 hover:bg-accent/30 transition-colors"
-              title="AI Hub"
+              title={t("app.brand")}
             >
               H
             </Link>
@@ -232,7 +224,7 @@ export function Sidebar({
                 onClick={handleNew}
                 disabled={loading}
                 className="p-1.5 rounded-md hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
-                title="New chat"
+                title={t("layout.sidebar.newChat")}
               >
                 <PlusIcon className="w-4 h-4" />
               </button>
@@ -246,7 +238,7 @@ export function Sidebar({
             onClick={() => onMobileClose?.()}
             className="text-white font-semibold text-sm tracking-wide hover:text-gray-200 transition-colors truncate"
           >
-            AI Hub
+            {t("app.brand")}
           </Link>
           <div className="flex items-center gap-0.5">
             {isAuthenticated && (
@@ -254,7 +246,7 @@ export function Sidebar({
                 onClick={handleNew}
                 disabled={loading}
                 className="p-1.5 rounded-md hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
-                title="New chat"
+                title={t("layout.sidebar.newChat")}
               >
                 <PlusIcon className="w-4 h-4" />
               </button>
@@ -262,16 +254,16 @@ export function Sidebar({
             <button
               onClick={toggleCollapsed}
               className="hidden md:inline-flex p-1.5 rounded-md hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
-              title="Thu nhỏ menu"
-              aria-label="Collapse sidebar"
+              title={t("layout.sidebar.collapse")}
+              aria-label={t("layout.sidebar.collapse")}
             >
               <ChevronDoubleLeftIcon className="w-4 h-4" />
             </button>
             <button
               onClick={onMobileClose}
               className="md:hidden p-1.5 rounded-md hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
-              title="Đóng menu"
-              aria-label="Close menu"
+              title={t("layout.sidebar.close")}
+              aria-label={t("layout.mobile.closeMenu")}
             >
               <XMarkIcon className="w-4 h-4" />
             </button>
@@ -281,8 +273,9 @@ export function Sidebar({
 
       {/* Main navigation */}
       <nav className={`py-2 border-b border-gray-700 space-y-0.5 ${isDrawerExpanded ? "px-2" : "px-1"}`}>
-        {NAV_ITEMS.map(({ href, label, icon: Icon, match }) => {
+        {NAV_ITEMS.map(({ href, labelKey, icon: Icon, match }) => {
           const active = match(pathname);
+          const label = t(labelKey);
           return (
             <Link
               key={href}
@@ -301,53 +294,28 @@ export function Sidebar({
       {/* Conversation list or guest prompt */}
       <div className={`flex-1 overflow-y-auto py-2 space-y-0.5 ${isDrawerExpanded ? "px-2" : "px-1"}`}>
         {!isAuthReady ? (
-          isDrawerExpanded && <p className="text-gray-600 text-xs text-center mt-8 px-4">Loading…</p>
+          isDrawerExpanded && <p className="text-gray-600 text-xs text-center mt-8 px-4">{t("common.loading")}</p>
         ) : !isAuthenticated ? (
-          collapsed && !mobileOpen ? (
-            <div className="mt-4 flex flex-col items-center gap-2">
-              <Link
-                href="/auth/login"
-                onClick={() => onMobileClose?.()}
-                className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-gray-800 transition-colors"
-                title="Đăng nhập"
-              >
-                <UserCircleIcon className="w-5 h-5" />
-              </Link>
-            </div>
-          ) : (
+          isDrawerExpanded && (
             <div className="mt-8 px-3 space-y-3 text-center">
               <UserCircleIcon className="w-10 h-10 text-gray-600 mx-auto" />
               <p className="text-gray-500 text-xs leading-relaxed">
-                Đăng nhập để lưu lịch sử hội thoại, đồng bộ cài đặt và tạo agents cá nhân.
+                {t("layout.sidebar.guestPrompt")}
               </p>
-              <Link
-                href="/auth/login"
-                onClick={() => onMobileClose?.()}
-                className="block w-full bg-accent hover:bg-accent-hover text-white text-xs py-2 rounded-lg transition-colors text-center"
-              >
-                Đăng nhập
-              </Link>
-              <Link
-                href="/auth/register"
-                onClick={() => onMobileClose?.()}
-                className="block w-full border border-gray-600 hover:border-gray-400 text-gray-400 hover:text-white text-xs py-2 rounded-lg transition-colors text-center"
-              >
-                Tạo tài khoản
-              </Link>
             </div>
           )
         ) : (
           <>
             {conversations.length === 0 && isDrawerExpanded && (
               <p className="text-gray-500 text-xs text-center mt-8 px-4">
-                No conversations yet. Start chatting!
+                {t("layout.sidebar.noConversations")}
               </p>
             )}
             {conversations.map((conv) => (
               <div
                 key={conv.id}
                 onClick={() => editingId !== conv.id && handleSelectConversation(conv.id)}
-                title={conv.title || "New conversation"}
+                title={conv.title || t("layout.sidebar.newConversation")}
                 className={`group w-full flex items-center rounded-lg text-sm text-left transition-colors cursor-pointer ${
                   isDrawerExpanded ? "gap-2 px-3 py-2" : "justify-center p-2.5"
                 } ${
@@ -379,20 +347,20 @@ export function Sidebar({
                   ) : (
                     <>
                       <span className="flex-1 truncate">
-                        {conv.title || "New conversation"}
+                        {conv.title || t("layout.sidebar.newConversation")}
                       </span>
                       <span className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 shrink-0">
                         <span
                           onClick={(e) => startEdit(e, conv)}
                           className="p-0.5 rounded hover:text-gray-200 transition-opacity cursor-pointer"
-                          title="Rename"
+                          title={t("layout.sidebar.rename")}
                         >
                           <PencilIcon className="w-3 h-3" />
                         </span>
                         <span
                           onClick={(e) => handleDelete(e, conv.id)}
                           className="p-0.5 rounded hover:text-red-400 transition-opacity cursor-pointer"
-                          title="Delete"
+                          title={t("layout.sidebar.delete")}
                         >
                           <TrashIcon className="w-3 h-3" />
                         </span>
@@ -408,17 +376,7 @@ export function Sidebar({
 
       {/* Footer */}
       {isAuthenticated && (
-        <div className={`border-t border-gray-700 space-y-2 ${isDrawerExpanded ? "px-3 py-3" : "px-1 py-2"}`}>
-          <button
-            onClick={() => void logout()}
-            title="Sign out"
-            className={`flex items-center w-full rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors ${
-              isDrawerExpanded ? "gap-2 px-3 py-2 text-xs" : "justify-center p-2.5"
-            }`}
-          >
-            <ArrowRightStartOnRectangleIcon className={`shrink-0 ${isDrawerExpanded ? "w-4 h-4" : "w-5 h-5"}`} />
-            {isDrawerExpanded && <span>Sign out</span>}
-          </button>
+        <div className={`border-t border-gray-700 ${isDrawerExpanded ? "px-3 py-3" : "px-1 py-2"}`}>
           <QuotaMeter collapsed={!isDrawerExpanded} />
         </div>
       )}

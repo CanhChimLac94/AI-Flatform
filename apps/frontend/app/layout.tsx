@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { I18nProvider } from "@/contexts/I18nContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PersonaConflictModal } from "@/components/settings/PersonaConflictModal";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -14,13 +15,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" className="h-full dark" data-theme="dark" suppressHydrationWarning>
       <body className={`${inter.className} h-full`}>
         <I18nProvider>
-          <AuthProvider>
-            {children}
-            <PersonaConflictModal />
-          </AuthProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              {children}
+              <PersonaConflictModal />
+            </AuthProvider>
+          </ThemeProvider>
         </I18nProvider>
       </body>
     </html>

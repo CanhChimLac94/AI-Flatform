@@ -4,8 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { listProviders, fetchProviderModels } from '@/lib/api';
 import type { ProviderCatalogItem } from '@/lib/types';
 import { useI18n } from '@/contexts/I18nContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { guestEnabledModelIds } from '@/lib/guestProviderModels';
 
 interface ProviderModelSelectorProps {
   selectedProvider: string;
@@ -23,7 +21,6 @@ export const ProviderModelSelector: React.FC<ProviderModelSelectorProps> = ({
   disabled = false,
 }) => {
   const { t } = useI18n();
-  const { isAuthenticated } = useAuth();
   const [providers, setProviders] = useState<ProviderCatalogItem[]>([]);
   const [models, setModels] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,9 +51,7 @@ export const ProviderModelSelector: React.FC<ProviderModelSelectorProps> = ({
       if (!selectedProvider) return;
       try {
         setLoading(true);
-        const data = isAuthenticated
-          ? await fetchProviderModels(selectedProvider)
-          : guestEnabledModelIds(selectedProvider);
+        const data = await fetchProviderModels(selectedProvider);
         setModels(data);
         // Set default model if none selected or current not in list
         if (data.length > 0 && (!selectedModel || !data.includes(selectedModel))) {
@@ -69,7 +64,7 @@ export const ProviderModelSelector: React.FC<ProviderModelSelectorProps> = ({
       }
     };
     loadModels();
-  }, [selectedProvider, selectedModel, onModelChange, isAuthenticated]);
+  }, [selectedProvider, selectedModel, onModelChange]);
 
   const handleProviderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newProvider = e.target.value;

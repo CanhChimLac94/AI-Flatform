@@ -1,12 +1,51 @@
 {
+  "app": {
+    "brand": "AI Hub",
+    "loading": "Đang tải…"
+  },
   "nav": {
     "chat": "Trò chuyện",
     "agents": "Agents",
+    "flow": "Flow",
     "settings": "Cài đặt",
     "logout": "Đăng xuất"
   },
+  "layout": {
+    "sidebar": {
+      "expand": "Mở rộng menu",
+      "collapse": "Thu nhỏ menu",
+      "close": "Đóng menu",
+      "newChat": "Trò chuyện mới",
+      "guestPrompt": "Đăng nhập để lưu lịch sử hội thoại, đồng bộ cài đặt và tạo agents cá nhân. Dùng menu góc trên bên phải để đăng nhập.",
+      "noConversations": "Chưa có hội thoại. Bắt đầu trò chuyện!",
+      "newConversation": "Hội thoại mới",
+      "rename": "Đổi tên",
+      "delete": "Xóa"
+    },
+    "userMenu": {
+      "ariaLabel": "Menu tài khoản và cài đặt",
+      "settings": "Cài đặt",
+      "language": "Ngôn ngữ",
+      "theme": "Giao diện",
+      "english": "English",
+      "vietnamese": "Tiếng Việt",
+      "dark": "Tối",
+      "light": "Sáng",
+      "logout": "Đăng xuất",
+      "login": "Đăng nhập",
+      "register": "Tạo tài khoản",
+      "account": "Tài khoản",
+      "guest": "Khách"
+    },
+    "mobile": {
+      "openMenu": "Mở menu",
+      "closeMenu": "Đóng menu"
+    }
+  },
   "chat": {
     "title": "Chat",
+    "conversation": "Hội thoại",
+    "newConversation": "Hội thoại mới",
     "newChat": "Trò chuyện mới",
     "provider": "Nhà cung cấp",
     "model": "Mô hình",
@@ -19,10 +58,31 @@
     "typing": "Đang gõ...",
     "loading": "Đang tải...",
     "noMessages": "Không có tin nhắn nào. Bắt đầu cuộc trò chuyện!",
+    "emptyTitle": "Tôi có thể giúp gì cho bạn hôm nay?",
+    "emptySubtitle": "Hỏi tôi bất cứ điều gì. Tôi có thể tìm kiếm web, phân tích file, viết code và ghi nhớ các cuộc trò chuyện trước.",
     "deleteChat": "Xóa trò chuyện",
     "confirmDelete": "Bạn có chắc chắn muốn xóa cuộc trò chuyện này?",
     "error": "Có lỗi xảy ra",
-    "retryMessage": "Thử lại"
+    "retryMessage": "Thử lại",
+    "inputPlaceholder": "Nhắn tin AI Hub…",
+    "stopGenerating": "Dừng tạo nội dung",
+    "uploadFailed": "Lỗi tải file: {message}",
+    "options": {
+      "title": "Tùy chọn chat",
+      "responseMode": "Chế độ trả lời",
+      "channel": "Kênh",
+      "agent": "Agent",
+      "tools": "Công cụ",
+      "noAgent": "Không dùng agent",
+      "personal": "Cá nhân",
+      "system": "Hệ thống",
+      "webSearch": "Tìm kiếm web"
+    },
+    "modelPref": {
+      "auto": "Tự động",
+      "speed": "Nhanh",
+      "quality": "Chất lượng"
+    }
   },
   "providers": {
     "openai": "OpenAI",
@@ -49,13 +109,36 @@
     "signIn": "Đăng nhập",
     "signUp": "Đăng ký",
     "forgotPassword": "Quên mật khẩu?",
-    "noAccount": "Không có tài khoản?",
+    "noAccount": "Chưa có tài khoản?",
     "hasAccount": "Đã có tài khoản?",
     "loginSuccess": "Đăng nhập thành công",
-    "registerSuccess": "Đăng ký thành công"
+    "registerSuccess": "Đăng ký thành công",
+    "welcomeBack": "Chào mừng trở lại",
+    "signInSubtitle": "Đăng nhập vào AI Hub",
+    "createAccount": "Tạo tài khoản",
+    "registerSubtitle": "Tham gia AI Hub — miễn phí để bắt đầu",
+    "fullName": "Họ và tên",
+    "usernameOptional": "Tên đăng nhập (tuỳ chọn)",
+    "identifier": "Email hoặc Tên đăng nhập",
+    "continueAsGuest": "Tiếp tục không cần đăng nhập",
+    "or": "hoặc",
+    "signingIn": "Đang đăng nhập…",
+    "creatingAccount": "Đang tạo tài khoản…",
+    "getStarted": "Bắt đầu",
+    "createOne": "Tạo tài khoản",
+    "passwordMin": "Mật khẩu (tối thiểu 8 ký tự)"
   },
   "settings": {
     "title": "Cài đặt",
+    "tabsAria": "Cài đặt",
+    "tabs": {
+      "persona": "Persona",
+      "models": "Model",
+      "apiKeys": "API Keys"
+    },
+    "guestBanner": "Cài đặt được lưu cục bộ trên trình duyệt.",
+    "guestBannerLogin": "Đăng nhập",
+    "guestBannerSuffix": "để lưu an toàn trên máy chủ và đồng bộ giữa các thiết bị.",
     "language": "Ngôn ngữ",
     "defaultProvider": "Nhà cung cấp mặc định",
     "defaultModel": "Mô hình mặc định",
@@ -68,6 +151,9 @@
   },
   "agents": {
     "title": "Agents",
+    "guestBadge": "Khách — lưu cục bộ",
+    "systemLibrary": "Thư viện hệ thống",
+    "manageFlows": "Quản lý Flow",
     "newAgent": "Agent mới",
     "name": "Tên",
     "description": "Mô tả",
@@ -78,7 +164,59 @@
     "create": "Tạo",
     "edit": "Chỉnh sửa",
     "delete": "Xóa",
-    "noAgents": "Không có agents nào"
+    "noAgents": "Chưa có agent nào",
+    "noAgentsHint": "Tạo agent đầu tiên để bắt đầu.",
+    "createFirst": "Tạo agent đầu tiên",
+    "deleteConfirm": "Xóa agent?",
+    "personal": "Cá nhân",
+    "systemTitle": "Agents hệ thống",
+    "manage": "Quản lý",
+    "manageTitle": "Quản lý agents hệ thống",
+    "admin": "Admin",
+    "categoriesTab": "Nhóm phân loại",
+    "library": "Thư viện",
+    "newSystemAgent": "Agent mới",
+    "checkingPermission": "Đang kiểm tra quyền…"
+  },
+  "flows": {
+    "manage": "Quản lý Flow",
+    "guestBadge": "Khách — lưu cục bộ",
+    "newFlow": "Tạo flow mới",
+    "createFirst": "Tạo flow đầu tiên",
+    "noFlows": "Chưa có flow nào",
+    "noFlowsHint": "Tạo quy trình AI agent với Flow Designer và lưu theo tài khoản của bạn.",
+    "deleteConfirm": "Xóa flow?",
+    "deleteConfirmBody": "Flow {name} sẽ bị xóa vĩnh viễn.",
+    "designerLoading": "Đang tải Flow Designer…",
+    "editInfo": "Sửa thông tin",
+    "duplicate": "Nhân bản",
+    "delete": "Xóa flow",
+    "runNow": "Chạy ngay",
+    "running": "Đang chạy…",
+    "viewResults": "Xem kết quả",
+    "schedule": "Đặt lịch chạy",
+    "connections": "kết nối",
+    "nodes": "node",
+    "openDesigner": "Mở designer",
+    "sectionRun": "Thực thi",
+    "viewResultsLatest": "Xem kết quả lần chạy gần nhất",
+    "menuSettings": "Cài đặt",
+    "autoSaveTitle": "Tự động lưu",
+    "autoSaveOff": "Tắt",
+    "autoSave1m": "Mỗi 1 phút",
+    "autoSave3m": "Mỗi 3 phút",
+    "autoSave5m": "Mỗi 5 phút",
+    "autoSaveCustom": "Tùy chỉnh",
+    "autoSaveCustomMinutes": "Khoảng thời gian (phút)",
+    "autoSaveMinutesUnit": "phút",
+    "autoSaveHint": "Chỉ lưu khi flow có thay đổi.",
+    "autoSaving": "Đang tự động lưu…",
+    "autoSaved": "Đã tự động lưu"
+  },
+  "quota": {
+    "daily": "Hạn mức ngày",
+    "tokensLeft": "Còn {count} token",
+    "tooltip": "Hạn mức ngày: còn {remaining} token (đã dùng {pct}%)"
   },
   "common": {
     "ok": "OK",
@@ -94,5 +232,11 @@
     "success": "Thành công",
     "warning": "Cảnh báo",
     "info": "Thông tin"
+  },
+  "errors": {
+    "loadFailed": "Không tải được",
+    "saveFailed": "Lưu thất bại",
+    "deleteFailed": "Xóa thất bại",
+    "duplicateFailed": "Nhân bản thất bại"
   }
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { SidebarContext } from "./SidebarContext";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -15,6 +16,7 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, sidebarProps }: AppShellProps) {
+  const { t } = useI18n();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const closeMobileSidebar = () => setMobileOpen(false);
@@ -26,8 +28,8 @@ export function AppShell({ children, sidebarProps }: AppShellProps) {
         {mobileOpen && (
           <button
             type="button"
-            aria-label="Close menu"
-            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+            aria-label={t("layout.mobile.closeMenu")}
+            className="fixed inset-0 z-40 bg-overlay md:hidden"
             onClick={closeMobileSidebar}
           />
         )}

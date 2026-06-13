@@ -4,9 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { AppUserMenu } from "@/components/layout/AppUserMenu";
+import { useI18n } from "@/contexts/I18nContext";
 
 export default function RegisterPage() {
   const { register } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -31,10 +34,11 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-chat-bg px-4">
+      <AppUserMenu variant="floating" />
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white">Create account</h1>
-          <p className="text-gray-400 text-sm mt-1">Join AI Hub — free to start</p>
+          <h1 className="text-2xl font-bold text-white">{t("auth.createAccount")}</h1>
+          <p className="text-gray-400 text-sm mt-1">{t("auth.registerSubtitle")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -45,7 +49,7 @@ export default function RegisterPage() {
           )}
           <input
             type="text"
-            placeholder="Họ và tên"
+            placeholder={t("auth.fullName")}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -53,7 +57,7 @@ export default function RegisterPage() {
           />
           <input
             type="text"
-            placeholder="Tên đăng nhập (tuỳ chọn)"
+            placeholder={t("auth.usernameOptional")}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
@@ -61,7 +65,7 @@ export default function RegisterPage() {
           />
           <input
             type="email"
-            placeholder="Email"
+            placeholder={t("auth.email")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -69,7 +73,7 @@ export default function RegisterPage() {
           />
           <input
             type="password"
-            placeholder="Password (min 8 chars)"
+            placeholder={t("auth.passwordMin")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             minLength={8}
@@ -81,14 +85,14 @@ export default function RegisterPage() {
             disabled={loading}
             className="w-full bg-accent hover:bg-accent-hover text-white py-3 rounded-xl text-sm font-medium transition-colors disabled:opacity-60"
           >
-            {loading ? "Creating account…" : "Get started"}
+            {loading ? t("auth.creatingAccount") : t("auth.getStarted")}
           </button>
         </form>
 
         <p className="text-center text-sm text-gray-500">
-          Already have an account?{" "}
+          {t("auth.hasAccount")}{" "}
           <Link href="/auth/login" className="text-accent hover:text-accent-hover">
-            Sign in
+            {t("auth.signIn")}
           </Link>
         </p>
       </div>

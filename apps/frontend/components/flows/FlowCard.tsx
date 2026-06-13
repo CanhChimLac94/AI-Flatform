@@ -7,7 +7,6 @@ import {
   TrashIcon,
   DocumentDuplicateIcon,
   Squares2X2Icon,
-  ArrowTopRightOnSquareIcon,
   ClockIcon,
   PlayIcon,
   DocumentTextIcon,
@@ -15,12 +14,12 @@ import {
 } from "@heroicons/react/24/outline";
 import type { AgentFlowSummary } from "@/lib/types";
 import { useHasMounted } from "@/hooks/useHasMounted";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface Props {
   flow: AgentFlowSummary;
   showSchedule?: boolean;
   isRunning?: boolean;
-  onEdit: (flow: AgentFlowSummary) => void;
   onDelete: (flow: AgentFlowSummary) => void;
   onDuplicate: (flow: AgentFlowSummary) => void;
   onSchedule?: (flow: AgentFlowSummary) => void;
@@ -51,9 +50,9 @@ function scheduleLabel(flow: AgentFlowSummary): string | null {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  success: "text-emerald-400",
-  failed: "text-red-400",
-  running: "text-amber-400",
+  success: "text-emerald-500",
+  failed: "text-red-500",
+  running: "text-amber-500",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -82,7 +81,7 @@ function MenuItem({
   const className = `w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors disabled:opacity-50 ${
     danger
       ? "text-red-400 hover:bg-red-900/20"
-      : "text-gray-300 hover:bg-gray-700 hover:text-white"
+      : "text-muted hover:bg-surface-hover hover:text-foreground"
   }`;
 
   const content = (
@@ -110,7 +109,7 @@ function MenuItem({
 function MenuSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="py-1">
-      <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+      <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
         {title}
       </p>
       {children}
@@ -122,7 +121,6 @@ export function FlowCard({
   flow,
   showSchedule = false,
   isRunning = false,
-  onEdit,
   onDelete,
   onDuplicate,
   onSchedule,
@@ -130,6 +128,7 @@ export function FlowCard({
   onViewResults,
 }: Props) {
   const mounted = useHasMounted();
+  const { t } = useI18n();
   const scheduleText = mounted ? scheduleLabel(flow) : null;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -151,26 +150,26 @@ export function FlowCard({
   };
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 flex flex-col gap-3 hover:border-gray-600 transition-colors">
+    <div className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-3 hover:border-indigo-500/40 transition-colors">
       <div className="flex items-start justify-between gap-2">
         <Link
           href={`/agents/flow/${flow.id}`}
           className="flex-1 min-w-0 group"
-          title="Mở Flow Designer"
+          title={t("flows.openDesigner")}
         >
           <div className="flex items-center gap-2 min-w-0">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-700/80 border border-gray-600 shrink-0 group-hover:border-indigo-500/50 transition-colors">
-              <Squares2X2Icon className="w-4 h-4 text-indigo-300" />
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-surface-elevated border border-border shrink-0 group-hover:border-indigo-500/50 transition-colors">
+              <Squares2X2Icon className="w-4 h-4 text-indigo-500" />
             </div>
-            <h3 className="text-sm font-semibold text-white truncate group-hover:text-indigo-200 transition-colors">
+            <h3 className="text-sm font-semibold text-foreground truncate group-hover:text-indigo-500 transition-colors">
               {flow.name}
             </h3>
           </div>
           {flow.description && (
-            <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{flow.description}</p>
+            <p className="text-xs text-muted mt-0.5 line-clamp-2">{flow.description}</p>
           )}
           {scheduleText && (
-            <p className="text-[11px] text-indigo-300/90 mt-1 flex items-center gap-1" suppressHydrationWarning>
+            <p className="text-[11px] text-indigo-500 mt-1 flex items-center gap-1" suppressHydrationWarning>
               <ClockIcon className="w-3.5 h-3.5 shrink-0" />
               {scheduleText}
             </p>
@@ -183,24 +182,24 @@ export function FlowCard({
             onClick={() => setMenuOpen((v) => !v)}
             className={`p-1.5 rounded-lg border transition-colors ${
               menuOpen
-                ? "bg-gray-700 border-gray-600 text-white"
-                : "border-transparent text-gray-500 hover:text-white hover:bg-gray-700"
+                ? "bg-surface-elevated border-border text-foreground"
+                : "border-transparent text-muted hover:text-foreground hover:bg-surface-hover"
             }`}
-            aria-label="Tùy chọn flow"
+            aria-label={t("flows.manage")}
             aria-expanded={menuOpen}
           >
-            <EllipsisVerticalIcon className={`w-5 h-5 ${isRunning ? "text-emerald-400 animate-pulse" : ""}`} />
+            <EllipsisVerticalIcon className={`w-5 h-5 ${isRunning ? "text-emerald-500 animate-pulse" : ""}`} />
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 z-50 w-52 py-1 rounded-xl bg-gray-900 border border-gray-700 shadow-xl">
+            <div className="absolute right-0 top-full mt-1 z-50 w-52 py-1 rounded-xl bg-surface border border-border shadow-xl">
               {showSchedule && (
-                <MenuSection title="Thực thi">
+                <MenuSection title={t("flows.sectionRun")}>
                   {onRun && (
                     <MenuItem
                       icon={PlayIcon}
-                      label={isRunning ? "Đang chạy..." : "Chạy ngay"}
-                      iconClassName="text-emerald-400"
+                      label={isRunning ? t("flows.running") : t("flows.runNow")}
+                      iconClassName="text-emerald-500"
                       disabled={isRunning}
                       onClick={() => closeAnd(() => onRun(flow))}
                     />
@@ -208,16 +207,16 @@ export function FlowCard({
                   {onViewResults && (
                     <MenuItem
                       icon={DocumentTextIcon}
-                      label="Xem kết quả"
-                      iconClassName="text-sky-400"
+                      label={t("flows.viewResults")}
+                      iconClassName="text-sky-500"
                       onClick={() => closeAnd(() => onViewResults(flow))}
                     />
                   )}
                   {onSchedule && (
                     <MenuItem
                       icon={ClockIcon}
-                      label="Đặt lịch chạy"
-                      iconClassName="text-indigo-400"
+                      label={t("flows.schedule")}
+                      iconClassName="text-indigo-500"
                       onClick={() => closeAnd(() => onSchedule(flow))}
                     />
                   )}
@@ -226,27 +225,22 @@ export function FlowCard({
 
               <MenuSection title="Flow">
                 <MenuItem
-                  icon={ArrowTopRightOnSquareIcon}
-                  label="Mở Flow Designer"
-                  href={`/agents/flow/${flow.id}`}
+                  icon={PencilIcon}
+                  label={t("flows.editInfo")}
+                  href={`/agents/flow/${flow.id}?edit=info`}
                   onClick={() => setMenuOpen(false)}
                 />
                 <MenuItem
-                  icon={PencilIcon}
-                  label="Sửa thông tin"
-                  onClick={() => closeAnd(() => onEdit(flow))}
-                />
-                <MenuItem
                   icon={DocumentDuplicateIcon}
-                  label="Nhân bản"
+                  label={t("flows.duplicate")}
                   onClick={() => closeAnd(() => onDuplicate(flow))}
                 />
               </MenuSection>
 
-              <div className="border-t border-gray-700/80 py-1">
+              <div className="border-t border-border py-1">
                 <MenuItem
                   icon={TrashIcon}
-                  label="Xóa flow"
+                  label={t("flows.delete")}
                   danger
                   onClick={() => closeAnd(() => onDelete(flow))}
                 />
@@ -256,26 +250,26 @@ export function FlowCard({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-        <span className="bg-gray-700/80 text-gray-300 px-2 py-0.5 rounded-full">
-          {flow.node_count} node
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+        <span className="bg-surface-elevated text-muted px-2 py-0.5 rounded-full border border-border">
+          {flow.node_count} {t("flows.nodes")}
         </span>
-        <span className="bg-gray-700/80 text-gray-300 px-2 py-0.5 rounded-full">
-          {flow.edge_count} kết nối
+        <span className="bg-surface-elevated text-muted px-2 py-0.5 rounded-full border border-border">
+          {flow.edge_count} {t("flows.connections")}
         </span>
         {flow.last_run_status && (
           <button
             type="button"
             onClick={() => showSchedule && onViewResults && closeAnd(() => onViewResults(flow))}
-            className={`px-2 py-0.5 rounded-full bg-gray-700/50 hover:bg-gray-700 transition-colors ${
-              STATUS_COLORS[flow.last_run_status] ?? "text-gray-400"
+            className={`px-2 py-0.5 rounded-full bg-surface-elevated border border-border hover:bg-surface-hover transition-colors ${
+              STATUS_COLORS[flow.last_run_status] ?? "text-muted"
             } ${showSchedule && onViewResults ? "cursor-pointer" : "cursor-default"}`}
-            title={showSchedule && onViewResults ? "Xem kết quả lần chạy gần nhất" : undefined}
+            title={showSchedule && onViewResults ? t("flows.viewResultsLatest") : undefined}
           >
             {STATUS_LABEL[flow.last_run_status] ?? flow.last_run_status}
           </button>
         )}
-        <span className="text-gray-600 ml-auto" suppressHydrationWarning>
+        <span className="text-muted ml-auto" suppressHydrationWarning>
           {mounted ? formatDate(flow.updated_at) : "—"}
         </span>
       </div>

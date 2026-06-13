@@ -13,7 +13,7 @@ interface FlowAgentCategorySectionProps {
 function CategoryGroupLabel({ category }: { category: AgentCategory | null }) {
   if (!category) {
     return (
-      <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest px-1">
+      <p className="text-[8px] font-bold text-muted uppercase tracking-widest px-1">
         Chưa phân loại
       </p>
     );

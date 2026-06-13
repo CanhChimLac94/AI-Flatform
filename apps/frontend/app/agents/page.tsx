@@ -9,6 +9,7 @@ import { AgentForm } from "@/components/agents/AgentForm";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuth } from "@/contexts/AuthContext";
+import { useI18n } from "@/contexts/I18nContext";
 import {
   listAgents, createAgent, updateAgent, deleteAgent, duplicateAgent, listAgentCategories,
 } from "@/lib/api";
@@ -21,6 +22,7 @@ type FormMode = { type: "create" } | { type: "edit"; agent: Agent } | null;
 
 export default function AgentsPage() {
   const { isAuthenticated, isAuthReady } = useAuth();
+  const { t } = useI18n();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [categories, setCategories] = useState<AgentCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,11 +121,11 @@ export default function AgentsPage() {
     <AppShell>
       <PageHeader
         icon={CpuChipIcon}
-        title="Agents"
+        title={t("agents.title")}
         badge={
           isAuthReady && !isAuthenticated ? (
             <span className="text-xs bg-amber-900/30 text-amber-400 border border-amber-800/50 px-2 py-0.5 rounded-full">
-              Guest — saved locally
+              {t("agents.guestBadge")}
             </span>
           ) : undefined
         }
@@ -132,26 +134,26 @@ export default function AgentsPage() {
             <Link
               href="/agents/system"
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-emerald-700/50 hover:border-emerald-500 text-emerald-400 hover:text-emerald-300 text-xs font-medium rounded-lg transition-colors"
-              title="Thư viện hệ thống"
+              title={t("agents.systemLibrary")}
             >
               <ServerStackIcon className="w-4 h-4" />
-              <span className="hidden sm:inline">Thư viện hệ thống</span>
+              <span className="hidden sm:inline">{t("agents.systemLibrary")}</span>
             </Link>
             <Link
               href="/agents/flows"
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-gray-600 hover:border-gray-400 text-gray-300 hover:text-white text-xs font-medium rounded-lg transition-colors"
-              title="Quản lý Flow"
+              title={t("agents.manageFlows")}
             >
               <Squares2X2Icon className="w-4 h-4" />
-              <span className="hidden sm:inline">Quản lý Flow</span>
+              <span className="hidden sm:inline">{t("agents.manageFlows")}</span>
             </Link>
             <button
               onClick={() => setFormMode({ type: "create" })}
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-colors"
-              title="New agent"
+              title={t("agents.newAgent")}
             >
               <PlusIcon className="w-4 h-4" />
-              <span className="hidden sm:inline">New agent</span>
+              <span className="hidden sm:inline">{t("agents.newAgent")}</span>
             </button>
           </>
         }
@@ -177,7 +179,7 @@ export default function AgentsPage() {
                 <CpuChipIcon className="w-8 h-8 text-gray-600" />
               </div>
               <div>
-                <p className="text-gray-300 font-medium">No agents yet</p>
+                <p className="text-gray-300 font-medium">{t("agents.noAgents")}</p>
                 <p className="text-sm text-gray-500 mt-1">
                   Create a custom agent with its own system prompt, model, and tools.
                 </p>
@@ -218,7 +220,7 @@ export default function AgentsPage() {
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
           <div className="w-full max-w-sm bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-6">
-            <h2 className="text-base font-semibold text-white mb-2">Delete agent?</h2>
+            <h2 className="text-base font-semibold text-white mb-2">{t("agents.deleteConfirm")}</h2>
             <p className="text-sm text-gray-400 mb-6">
               <span className="text-white font-medium">{deleteConfirm.name}</span> will be permanently deleted.
               This cannot be undone.

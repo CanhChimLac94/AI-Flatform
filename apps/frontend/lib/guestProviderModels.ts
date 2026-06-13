@@ -5,9 +5,10 @@
 import type { GuestSettings, ProviderModelEntry } from "./types";
 import { PROVIDERS } from "./types";
 import { loadGuestSettings, saveGuestSettings } from "./guestSettings";
+import { randomUUID } from "./randomId";
 
 function newId(): string {
-  return crypto.randomUUID();
+  return randomUUID();
 }
 
 function seedProviderModels(provider: string): ProviderModelEntry[] {
@@ -83,7 +84,6 @@ export function guestUpdateProviderModel(
   if (idx === -1) throw new Error("Model entry not found");
   const row = rows[idx];
   if (patch.model_id !== undefined) {
-    if (row.is_builtin) throw new Error("Cannot change model_id of a built-in entry");
     if (rows.some((r) => r.id !== entryId && r.model_id === patch.model_id)) {
       throw new Error("Model already exists for this provider");
     }
@@ -102,7 +102,6 @@ export function guestDeleteProviderModel(provider: string, entryId: string): voi
   const rows = s.providerModels[provider] ?? [];
   const row = rows.find((r) => r.id === entryId);
   if (!row) throw new Error("Model entry not found");
-  if (row.is_builtin) throw new Error("Built-in models cannot be deleted; disable them instead");
   s.providerModels[provider] = rows.filter((r) => r.id !== entryId);
   saveGuestSettings(s);
 }

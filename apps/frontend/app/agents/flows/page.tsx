@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PlusIcon, Squares2X2Icon } from "@heroicons/react/24/outline";
-import type { AgentFlowSummary, FlowCreateRequest, FlowUpdateRequest } from "@/lib/types";
+import type { AgentFlowSummary, FlowCreateRequest } from "@/lib/types";
 import { FlowCard } from "@/components/flows/FlowCard";
 import { FlowForm } from "@/components/flows/FlowForm";
 import { FlowScheduleModal } from "@/components/flows/FlowScheduleModal";
@@ -11,18 +11,16 @@ import { FlowRunResultsModal } from "@/components/flows/FlowRunResultsModal";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuth } from "@/contexts/AuthContext";
+import { useI18n } from "@/contexts/I18nContext";
 import {
-  listFlows, createFlow, updateFlow, deleteFlow, duplicateFlow, runFlowNow,
+  listFlows, createFlow, deleteFlow, duplicateFlow, runFlowNow,
 } from "@/lib/api";
 import {
-  loadGuestFlowSummaries, createGuestFlow, updateGuestFlow,
+  loadGuestFlowSummaries, createGuestFlow,
   deleteGuestFlow, duplicateGuestFlow,
 } from "@/lib/flowStore";
 
-type FormMode =
-  | { type: "create" }
-  | { type: "edit"; flow: AgentFlowSummary }
-  | null;
+type FormMode = { type: "create" } | null;
 
 type ScheduleMode = { flow: AgentFlowSummary } | null;
 
@@ -36,6 +34,7 @@ const EMPTY_GRAPH = { nodes: [], edges: [], version: "1.0" };
 export default function FlowsManagePage() {
   const router = useRouter();
   const { isAuthenticated, isAuthReady } = useAuth();
+  const { t } = useI18n();
   const [flows, setFlows] = useState<AgentFlowSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,8 +65,8 @@ export default function FlowsManagePage() {
     void load();
   }, [load, isAuthReady]);
 
-  const handleCreate = useCallback(async (data: FlowCreateRequest | FlowUpdateRequest) => {
-    const payload = data as FlowCreateRequest;
+  const handleCreate = useCallback(async (data: FlowCreateRequest) => {
+    const payload = data;
     if (isAuthenticated) {
       const created = await createFlow({
         name: payload.name,
@@ -84,45 +83,6 @@ export default function FlowsManagePage() {
     });
     router.push(`/agents/flow/${created.id}`);
   }, [isAuthenticated, router]);
-
-  const handleEditMeta = useCallback(async (data: FlowCreateRequest | FlowUpdateRequest) => {
-    if (formMode?.type !== "edit") return;
-    const id = formMode.flow.id;
-    const payload = data as FlowUpdateRequest;
-
-    if (isAuthenticated) {
-      const updated = await updateFlow(id, payload);
-      setFlows((prev) =>
-        prev.map((f) =>
-          f.id === id
-            ? {
-                ...f,
-                name: updated.name,
-                description: updated.description,
-                updated_at: updated.updated_at,
-              }
-            : f,
-        ),
-      );
-    } else {
-      const updated = updateGuestFlow(id, payload);
-      if (updated) {
-        setFlows((prev) =>
-          prev.map((f) =>
-            f.id === id
-              ? {
-                  ...f,
-                  name: updated.name,
-                  description: updated.description,
-                  updated_at: updated.updated_at,
-                }
-              : f,
-          ),
-        );
-      }
-    }
-    setFormMode(null);
-  }, [formMode, isAuthenticated]);
 
   const handleDuplicate = useCallback(async (flow: AgentFlowSummary) => {
     try {
@@ -198,11 +158,11 @@ export default function FlowsManagePage() {
     <AppShell>
       <PageHeader
         icon={Squares2X2Icon}
-        title="Quản lý Flow"
+        title={t("flows.manage")}
         badge={
           isAuthReady && !isAuthenticated ? (
             <span className="text-xs bg-amber-900/30 text-amber-400 border border-amber-800/50 px-2 py-0.5 rounded-full">
-              Khách — lưu cục bộ
+              {t("flows.guestBadge")}
             </span>
           ) : undefined
         }
@@ -212,7 +172,7 @@ export default function FlowsManagePage() {
             className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition-colors"
           >
             <PlusIcon className="w-4 h-4" />
-            <span className="hidden sm:inline">Tạo flow mới</span>
+            <span className="hidden sm:inline">{t("flows.newFlow")}</span>
           </button>
         }
       />
@@ -228,18 +188,18 @@ export default function FlowsManagePage() {
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-36 bg-gray-800 rounded-xl animate-pulse" />
+                <div key={i} className="h-36 bg-surface-muted rounded-xl animate-pulse" />
               ))}
             </div>
           ) : flows.length === 0 ? (
             <div className="text-center py-24 flex flex-col items-center gap-4">
-              <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center">
-                <Squares2X2Icon className="w-8 h-8 text-gray-600" />
+              <div className="w-16 h-16 bg-surface-muted rounded-2xl flex items-center justify-center border border-border">
+                <Squares2X2Icon className="w-8 h-8 text-muted" />
               </div>
               <div>
-                <p className="text-gray-300 font-medium">Chưa có flow nào</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Tạo quy trình AI agent với Flow Designer và lưu theo tài khoản của bạn.
+                <p className="text-foreground font-medium">{t("flows.noFlows")}</p>
+                <p className="text-sm text-muted mt-1">
+                  {t("flows.noFlowsHint")}
                 </p>
               </div>
               <button
@@ -247,7 +207,7 @@ export default function FlowsManagePage() {
                 className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors"
               >
                 <PlusIcon className="w-4 h-4" />
-                Tạo flow đầu tiên
+                {t("flows.createFirst")}
               </button>
             </div>
           ) : (
@@ -258,7 +218,6 @@ export default function FlowsManagePage() {
                   flow={flow}
                   showSchedule={isAuthenticated}
                   isRunning={runningFlowId === flow.id}
-                  onEdit={(f) => setFormMode({ type: "edit", flow: f })}
                   onDelete={(f) => setDeleteConfirm(f)}
                   onDuplicate={handleDuplicate}
                   onSchedule={(f) => setScheduleMode({ flow: f })}
@@ -275,16 +234,6 @@ export default function FlowsManagePage() {
         <FlowForm
           mode="create"
           onSubmit={handleCreate}
-          onClose={() => setFormMode(null)}
-        />
-      )}
-
-      {formMode?.type === "edit" && (
-        <FlowForm
-          mode="edit"
-          initialName={formMode.flow.name}
-          initialDescription={formMode.flow.description ?? ""}
-          onSubmit={handleEditMeta}
           onClose={() => setFormMode(null)}
         />
       )}
@@ -308,24 +257,24 @@ export default function FlowsManagePage() {
       )}
 
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-          <div className="w-full max-w-sm bg-gray-900 border border-gray-700 rounded-2xl p-5 shadow-2xl">
-            <h3 className="text-sm font-semibold text-white">Xóa flow?</h3>
-            <p className="text-xs text-gray-400 mt-2">
-              Flow <span className="text-gray-200">{deleteConfirm.name}</span> sẽ bị xóa vĩnh viễn.
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay">
+          <div className="w-full max-w-sm bg-surface border border-border rounded-2xl p-5 shadow-2xl">
+            <h3 className="text-sm font-semibold text-foreground">{t("flows.deleteConfirm")}</h3>
+            <p className="text-xs text-muted mt-2">
+              {t("flows.deleteConfirmBody", "Flow {name} will be permanently deleted.", { name: deleteConfirm.name })}
             </p>
             <div className="flex justify-end gap-2 mt-5">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-gray-800"
+                className="px-4 py-2 text-sm text-muted hover:text-foreground rounded-lg hover:bg-surface-hover"
               >
-                Hủy
+                {t("common.cancel")}
               </button>
               <button
                 onClick={() => void handleDelete(deleteConfirm)}
-                className="px-4 py-2 text-sm font-medium bg-red-600 hover:bg-red-500 text-white rounded-lg"
+                className="px-4 py-2 text-sm font-medium bg-red-600 hover:bg-red-500 text-on-accent rounded-lg"
               >
-                Xóa
+                {t("common.delete")}
               </button>
             </div>
           </div>

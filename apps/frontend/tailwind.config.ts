@@ -6,12 +6,23 @@ const config: Config = {
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  darkMode: ["class", '[data-theme="dark"]'],
   theme: {
     extend: {
       colors: {
-        sidebar: "#111827",
-        "chat-bg": "#1f2937",
-        "input-bg": "#374151",
+        sidebar: "var(--color-sidebar)",
+        "chat-bg": "var(--color-chat-bg)",
+        "input-bg": "var(--color-input-bg)",
+        surface: {
+          DEFAULT: "var(--color-surface)",
+          muted: "var(--color-surface-muted)",
+          elevated: "var(--color-surface-elevated)",
+          hover: "var(--color-surface-hover)",
+        },
+        foreground: "var(--color-text)",
+        muted: "var(--color-text-muted)",
+        border: "var(--color-border)",
+        "on-accent": "var(--color-on-accent)",
         accent: "#6366f1",
         "accent-hover": "#4f46e5",
       },

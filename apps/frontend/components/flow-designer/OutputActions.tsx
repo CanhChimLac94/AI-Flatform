@@ -8,6 +8,7 @@ import {
   isExportableOutput,
   type OutputFileFormat,
 } from "./outputExport";
+import { FlowIcon } from "./flowIcons";
 
 interface OutputActionsProps {
   content?: string;
@@ -51,9 +52,7 @@ export function OutputActions({ content = "", label, preferredFormat = "auto", c
         title="Copy kết quả"
         className={`${btnClass} ${compact ? "w-7 h-7" : "gap-1 px-2 py-1"}`}
       >
-        <span className="material-symbols-outlined text-[16px]">
-          {copied ? "check" : "content_copy"}
-        </span>
+        <FlowIcon icon={copied ? "check" : "copy"} className="w-4 h-4" />
         {!compact && (
           <span className="text-[9px] font-bold uppercase">{copied ? "Đã copy" : "Copy"}</span>
         )}
@@ -71,7 +70,7 @@ export function OutputActions({ content = "", label, preferredFormat = "auto", c
           title="Xuất file"
           className={`${btnClass} ${compact ? "w-7 h-7" : "gap-1 px-2 py-1"}`}
         >
-          <span className="material-symbols-outlined text-[16px]">download</span>
+          <FlowIcon icon="download" className="w-4 h-4" />
           {!compact && <span className="text-[9px] font-bold uppercase">Xuất</span>}
         </button>
 

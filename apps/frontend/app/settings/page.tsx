@@ -32,6 +32,7 @@ import {
   setPreferredProvider,
   setPreferredModel,
 } from "@/lib/guestSettings";
+import { guestEnabledModelIds } from "@/lib/guestProviderModels";
 import {
   loadLocalPersona,
   saveLocalPersona,
@@ -39,6 +40,7 @@ import {
 } from "@/lib/personaSync";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ProviderModelsSection } from "@/components/settings/ProviderModelsSection";
 
 const TONE_OPTIONS = ["helpful", "formal", "casual", "concise", "creative"];
 
@@ -707,7 +709,9 @@ function PreferenceSection({
   onChange: () => void;
 }) {
   const currentProvider = PROVIDERS.find((p) => p.id === preferredProvider) ?? PROVIDERS[0];
-  const currentModel = preferredModelByProvider[preferredProvider] ?? currentProvider.defaultModel;
+  const enabledModels = guestEnabledModelIds(preferredProvider);
+  const modelOptions = enabledModels.length ? enabledModels : currentProvider.models;
+  const currentModel = preferredModelByProvider[preferredProvider] ?? modelOptions[0] ?? currentProvider.defaultModel;
 
   return (
     <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-5 space-y-4">
@@ -731,7 +735,7 @@ function PreferenceSection({
             onChange={(e) => { setPreferredModel(preferredProvider, e.target.value); onChange(); }}
             className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
           >
-            {currentProvider.models.map((m) => <option key={m} value={m}>{m}</option>)}
+            {modelOptions.map((m) => <option key={m} value={m}>{m}</option>)}
           </select>
         </div>
       </div>
@@ -785,6 +789,8 @@ export default function SettingsPage() {
           )}
 
           <PersonaEditor isAuthenticated={isAuthenticated} />
+
+        <ProviderModelsSection isAuthenticated={isAuthenticated} />
 
         {isAuthenticated ? (
           <AuthPreferenceSection />

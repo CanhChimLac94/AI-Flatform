@@ -12,7 +12,9 @@ from sqlalchemy.exc import DBAPIError, OperationalError
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.db.redis import close_redis, get_redis
-from app.db.session import engine
+from app.db.session import AsyncSessionLocal, engine
+from app.services.seed_system_agents import ensure_default_system_agents
+from app.services.flow_scheduler import flow_scheduler_loop
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +45,29 @@ async def _wait_for_dependencies(max_attempts: int = 30, delay: float = 1.0) -> 
 async def lifespan(app: FastAPI):
     max_attempts = 30 if settings.ENVIRONMENT == "development" else 5
     await _wait_for_dependencies(max_attempts=max_attempts)
+    try:
+        async with AsyncSessionLocal() as session:
+            await ensure_default_system_agents(session)
+    except Exception:
+        logger.exception("Failed to seed default system agents")
+
+    scheduler_task: asyncio.Task | None = None
+    if settings.FLOW_SCHEDULER_ENABLED:
+        scheduler_task = asyncio.create_task(flow_scheduler_loop())
+
     yield
+
+    if scheduler_task is not None:
+        scheduler_task.cancel()
+        try:
+            await scheduler_task
+        except asyncio.CancelledError:
+            pass
     await close_redis()
 
 
 app = FastAPI(
-    title="Omni AI Chat – Orchestrator API",
+    title="AI Hub – Orchestrator API",
     version="1.0.0",
     docs_url="/docs" if settings.ENVIRONMENT == "development" else None,
     redoc_url=None,

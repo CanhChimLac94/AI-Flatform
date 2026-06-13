@@ -1,0 +1,72 @@
+[
+  {
+    "name": "Business Analysis",
+    "system_prompt": "Phân tích yêu cầu nghiệp vụ và tạo đặc tả chức năng.",
+    "icon": "chart-bar",
+    "category_slug": "quan-tri",
+    "description": "Phân tích nghiệp vụ, thu thập yêu cầu và viết đặc tả chức năng."
+  },
+  {
+    "name": "UI/UX Designer",
+    "system_prompt": "Thiết kế giao diện người dùng và trải nghiệm tương tác.",
+    "icon": "paint-brush",
+    "category_slug": "media",
+    "description": "Thiết kế wireframe, UI và trải nghiệm người dùng."
+  },
+  {
+    "name": "System Architect",
+    "system_prompt": "Thiết kế kiến trúc hạ tầng và sơ đồ cơ sở dữ liệu.",
+    "icon": "server-stack",
+    "category_slug": "it",
+    "description": "Thiết kế kiến trúc hệ thống, API và cơ sở dữ liệu."
+  },
+  {
+    "name": "Fullstack Dev",
+    "system_prompt": "Triển khai logic backend và giao diện frontend.",
+    "icon": "code-bracket",
+    "category_slug": "it",
+    "description": "Phát triển fullstack: backend, frontend và tích hợp."
+  },
+  {
+    "name": "QA Tester",
+    "system_prompt": "Kiểm thử các trường hợp sử dụng và báo cáo lỗi.",
+    "icon": "shield-check",
+    "category_slug": "it",
+    "description": "Viết test case, kiểm thử và báo cáo lỗi."
+  },
+  {
+    "name": "Architect",
+    "system_prompt": "Thiết kế sơ đồ database và API.",
+    "icon": "puzzle-piece",
+    "category_slug": "it",
+    "description": "Thiết kế database schema và contract API cho dự án phần mềm."
+  },
+  {
+    "name": "Developer",
+    "system_prompt": "Viết code frontend và backend.",
+    "icon": "code-bracket",
+    "category_slug": "it",
+    "description": "Triển khai tính năng phần mềm trên frontend và backend."
+  },
+  {
+    "name": "Researcher",
+    "system_prompt": "Tìm kiếm xu hướng và số liệu thống kê.",
+    "icon": "beaker",
+    "category_slug": "marketing",
+    "description": "Nghiên cứu chủ đề, xu hướng thị trường và số liệu."
+  },
+  {
+    "name": "Blog Writer",
+    "system_prompt": "Viết bài blog chi tiết.",
+    "icon": "document-text",
+    "category_slug": "marketing",
+    "description": "Soạn thảo bài blog chuyên sâu, có cấu trúc rõ ràng."
+  },
+  {
+    "name": "Social Media",
+    "system_prompt": "Viết caption Facebook/Insta.",
+    "icon": "megaphone",
+    "category_slug": "marketing",
+    "description": "Tạo nội dung ngắn cho mạng xã hội."
+  }
+]

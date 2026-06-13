@@ -70,10 +70,6 @@ body {
 }
 
 /* Agent Flow Designer */
-.material-symbols-outlined {
-  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
-}
-
 .flow-dark-scrollbar::-webkit-scrollbar { width: 4px; }
 .flow-dark-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .flow-dark-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }

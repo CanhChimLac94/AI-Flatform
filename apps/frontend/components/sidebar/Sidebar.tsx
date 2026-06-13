@@ -42,10 +42,10 @@ const NAV_ITEMS = [
     match: (path: string) => path.startsWith("/agents/system"),
   },
   {
-    href: "/agents/flow",
+    href: "/agents/flows",
     label: "Flow",
     icon: Squares2X2Icon,
-    match: (path: string) => path.startsWith("/agents/flow"),
+    match: (path: string) => path.startsWith("/agents/flow") || path === "/agents/flows",
   },
 ] as const;
 
@@ -77,7 +77,7 @@ export function Sidebar({
   const { isAuthenticated, isAuthReady, logout } = useAuth();
 
   useEffect(() => {
-    if (pathname.startsWith("/agents/flow")) {
+    if (pathname.startsWith("/agents/flow/") || pathname === "/agents/flow") {
       setCollapsed(true);
       return;
     }
@@ -223,9 +223,9 @@ export function Sidebar({
             <Link
               href="/chat"
               className="w-8 h-8 flex items-center justify-center rounded-md text-white font-bold text-xs bg-accent/20 hover:bg-accent/30 transition-colors"
-              title="Omni AI"
+              title="AI Hub"
             >
-              O
+              H
             </Link>
             {isAuthenticated && (
               <button
@@ -246,7 +246,7 @@ export function Sidebar({
             onClick={() => onMobileClose?.()}
             className="text-white font-semibold text-sm tracking-wide hover:text-gray-200 transition-colors truncate"
           >
-            Omni AI
+            AI Hub
           </Link>
           <div className="flex items-center gap-0.5">
             {isAuthenticated && (

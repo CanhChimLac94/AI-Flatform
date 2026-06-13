@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { PlusIcon, CpuChipIcon, Squares2X2Icon, ServerStackIcon } from "@heroicons/react/24/outline";
-import type { Agent, AgentCreateRequest, AgentUpdateRequest } from "@/lib/types";
+import type { Agent, AgentCategory, AgentCreateRequest, AgentUpdateRequest } from "@/lib/types";
 import { AgentCard } from "@/components/agents/AgentCard";
 import { AgentForm } from "@/components/agents/AgentForm";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  listAgents, createAgent, updateAgent, deleteAgent, duplicateAgent,
+  listAgents, createAgent, updateAgent, deleteAgent, duplicateAgent, listAgentCategories,
 } from "@/lib/api";
 import {
   loadGuestAgents, createGuestAgent, updateGuestAgent,
@@ -20,8 +20,9 @@ import {
 type FormMode = { type: "create" } | { type: "edit"; agent: Agent } | null;
 
 export default function AgentsPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAuthReady } = useAuth();
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [categories, setCategories] = useState<AgentCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formMode, setFormMode] = useState<FormMode>(null);
@@ -31,6 +32,8 @@ export default function AgentsPage() {
     setLoading(true);
     setError(null);
     try {
+      const cats = await listAgentCategories();
+      setCategories(cats);
       if (isAuthenticated) {
         setAgents(await listAgents());
       } else {
@@ -43,16 +46,25 @@ export default function AgentsPage() {
     }
   }, [isAuthenticated]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!isAuthReady) return;
+    load();
+  }, [load, isAuthReady]);
 
   const handleSubmit = useCallback(async (data: AgentCreateRequest | AgentUpdateRequest) => {
+    const categoryIds = data.category_ids ?? [];
+    const selectedCategories = categories.filter((c) => categoryIds.includes(c.id));
+
     if (formMode?.type === "edit") {
       const id = formMode.agent.id;
       if (isAuthenticated) {
         const updated = await updateAgent(id, data as AgentUpdateRequest);
         setAgents((prev) => prev.map((a) => (a.id === id ? updated : a)));
       } else {
-        const updated = updateGuestAgent(id, data);
+        const updated = updateGuestAgent(id, {
+          ...data,
+          categories: selectedCategories,
+        });
         if (updated) setAgents((prev) => prev.map((a) => (a.id === id ? updated : a)));
       }
     } else {
@@ -66,12 +78,13 @@ export default function AgentsPage() {
           params: {},
           tools: data.tools ?? [],
           is_public: data.is_public ?? false,
+          categories: selectedCategories,
         });
         setAgents((prev) => [created, ...prev]);
       }
     }
     setFormMode(null);
-  }, [formMode, isAuthenticated]);
+  }, [formMode, isAuthenticated, categories]);
 
   const handleDuplicate = useCallback(async (agent: Agent) => {
     try {
@@ -108,7 +121,7 @@ export default function AgentsPage() {
         icon={CpuChipIcon}
         title="Agents"
         badge={
-          !isAuthenticated ? (
+          isAuthReady && !isAuthenticated ? (
             <span className="text-xs bg-amber-900/30 text-amber-400 border border-amber-800/50 px-2 py-0.5 rounded-full">
               Guest — saved locally
             </span>
@@ -125,12 +138,12 @@ export default function AgentsPage() {
               <span className="hidden sm:inline">Thư viện hệ thống</span>
             </Link>
             <Link
-              href="/agents/flow"
+              href="/agents/flows"
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-gray-600 hover:border-gray-400 text-gray-300 hover:text-white text-xs font-medium rounded-lg transition-colors"
-              title="Flow Designer"
+              title="Quản lý Flow"
             >
               <Squares2X2Icon className="w-4 h-4" />
-              <span className="hidden sm:inline">Flow Designer</span>
+              <span className="hidden sm:inline">Quản lý Flow</span>
             </Link>
             <button
               onClick={() => setFormMode({ type: "create" })}
@@ -195,6 +208,7 @@ export default function AgentsPage() {
 
       {formMode && (
         <AgentForm
+          categories={categories}
           initial={formMode.type === "edit" ? formMode.agent : undefined}
           onSubmit={handleSubmit}
           onCancel={() => setFormMode(null)}

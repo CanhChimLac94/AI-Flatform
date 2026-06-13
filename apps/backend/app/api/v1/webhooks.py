@@ -92,7 +92,7 @@ async def _handle_update(update: dict[str, Any]) -> None:
         if text == "/start":
             await send_message(
                 chat_id,
-                "👋 *Welcome to Omni AI Chat!*\n\n"
+                "👋 *Welcome to AI Hub!*\n\n"
                 "To link your account, visit the web app and generate a code "
                 "under Settings → Integrations, then send:\n"
                 "`/link YOUR_CODE`\n\n"

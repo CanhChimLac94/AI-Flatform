@@ -5,6 +5,8 @@ export interface NodeData {
   role?: string;
   prompt?: string;
   model?: string;
+  agentId?: string;
+  agentSource?: "user" | "system" | "sample";
   status?: "idle" | "running" | "success" | "error";
   value?: string;
   isEditing?: boolean;

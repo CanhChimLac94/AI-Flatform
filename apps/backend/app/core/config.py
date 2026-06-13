@@ -40,6 +40,12 @@ class Settings(BaseSettings):
 
     # App
     ENVIRONMENT: str = "development"
+    # Optional path to JSON file listing default system agents (see app/data/default_system_agents.json)
+    DEFAULT_SYSTEM_AGENTS_FILE: str = ""
+
+    # Flow scheduler
+    FLOW_SCHEDULER_ENABLED: bool = True
+    FLOW_SCHEDULER_POLL_SECONDS: int = 30
 
     # Rate limiting (EX-05): max messages per minute per account
     RATE_LIMIT_MESSAGES_PER_MINUTE: int = 10

@@ -13,22 +13,34 @@ const COLOR_OPTIONS = ["indigo", "cyan", "pink", "purple", "amber", "emerald", "
 interface CategoryManagerProps {
   categories: AgentCategory[];
   onChange: () => void;
+  /** When true, omits outer card chrome for use inside a tab panel. */
+  embedded?: boolean;
 }
 
 type FormMode = { type: "create" } | { type: "edit"; category: AgentCategory } | null;
 
-export function CategoryManager({ categories, onChange }: CategoryManagerProps) {
+export function CategoryManager({ categories, onChange, embedded = false }: CategoryManagerProps) {
   const [formMode, setFormMode] = useState<FormMode>(null);
   const [deleteTarget, setDeleteTarget] = useState<AgentCategory | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <section className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 sm:p-5 space-y-4">
+    <section
+      className={
+        embedded
+          ? "space-y-4"
+          : "rounded-xl border border-gray-700 bg-gray-800/40 p-4 sm:p-5 space-y-4"
+      }
+    >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-white">Nhóm phân loại</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Quản lý chủ đề/lĩnh vực cho agents hệ thống</p>
-        </div>
+        {embedded ? (
+          <p className="text-xs text-gray-500">Quản lý chủ đề/lĩnh vực cho agents hệ thống</p>
+        ) : (
+          <div>
+            <h2 className="text-sm font-semibold text-white">Nhóm phân loại</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Quản lý chủ đề/lĩnh vực cho agents hệ thống</p>
+          </div>
+        )}
         <button
           type="button"
           onClick={() => setFormMode({ type: "create" })}

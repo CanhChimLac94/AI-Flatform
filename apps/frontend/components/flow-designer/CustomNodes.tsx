@@ -5,13 +5,14 @@ import type { NodeData } from "./types";
 import { OutputActions } from "./OutputActions";
 import { EXPORT_FORMAT_OPTIONS } from "./outputExport";
 import type { OutputFileFormat } from "./outputExport";
+import { FlowIcon, type FlowIconKey } from "./flowIcons";
 
 interface NodeContainerProps {
   id: string;
   children: React.ReactNode;
   selected?: boolean;
   title: string;
-  icon: string;
+  icon: FlowIconKey;
   colorClass: string;
   iconColor: string;
   data: NodeData;
@@ -52,7 +53,7 @@ function NodeContainer({ id, children, selected, title, icon, colorClass, iconCo
     >
       <div className={`px-4 py-2.5 flex items-center justify-between border-b border-white/5 ${colorClass}`}>
         <div className="flex items-center gap-2">
-          <span className={`material-symbols-outlined text-[18px] ${iconColor}`}>{icon}</span>
+          <FlowIcon icon={icon} className={`w-[18px] h-[18px] ${iconColor}`} />
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80">{title}</span>
         </div>
 
@@ -61,7 +62,7 @@ function NodeContainer({ id, children, selected, title, icon, colorClass, iconCo
             onClick={runNode}
             className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 text-green-400 transition-colors"
           >
-            <span className="material-symbols-outlined text-[18px]">play_arrow</span>
+            <FlowIcon icon="play" className="w-[18px] h-[18px]" />
           </button>
           <button
             onClick={toggleEdit}
@@ -69,13 +70,13 @@ function NodeContainer({ id, children, selected, title, icon, colorClass, iconCo
               data.isEditing ? "text-blue-400 bg-white/10" : "text-white/40"
             }`}
           >
-            <span className="material-symbols-outlined text-[18px]">settings</span>
+            <FlowIcon icon="settings" className="w-[18px] h-[18px]" />
           </button>
           <button
             onClick={deleteNode}
             className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
           >
-            <span className="material-symbols-outlined text-[18px]">delete</span>
+            <FlowIcon icon="delete" className="w-[18px] h-[18px]" />
           </button>
         </div>
       </div>
@@ -170,7 +171,7 @@ export function AgentNode({ id, data, selected }: CustomNodeProps) {
     <NodeContainer
       id={id}
       title="AI Agent"
-      icon="smart_toy"
+      icon="agent"
       colorClass="bg-purple-500/5"
       iconColor="text-purple-400"
       selected={selected}

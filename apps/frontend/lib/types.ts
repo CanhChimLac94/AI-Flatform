@@ -28,6 +28,22 @@ export interface ProviderCatalogItem {
   key_prefix_hint: string;
 }
 
+export interface ProviderModelEntry {
+  id: string;
+  provider: string;
+  model_id: string;
+  display_name: string | null;
+  is_enabled: boolean;
+  is_builtin: boolean;
+  sort_order: number;
+}
+
+export interface ProviderModelGroup {
+  provider: string;
+  provider_name: string;
+  models: ProviderModelEntry[];
+}
+
 export interface TestKeyResult {
   ok: boolean;
   message: string;
@@ -46,6 +62,7 @@ export interface Agent {
   tools: string[];                  // ["web_search"]
   is_public: boolean;
   icon?: string | null;
+  categories?: AgentCategory[];
   created_at?: string;
   updated_at?: string;
 }
@@ -59,6 +76,7 @@ export interface AgentCreateRequest {
   tools?: string[];
   is_public?: boolean;
   icon?: string | null;
+  category_ids?: string[];
 }
 
 export interface AgentUpdateRequest {
@@ -70,6 +88,7 @@ export interface AgentUpdateRequest {
   tools?: string[];
   is_public?: boolean;
   icon?: string | null;
+  category_ids?: string[];
 }
 
 export interface AgentKnowledgeFile {
@@ -148,6 +167,87 @@ export interface SystemAgentUpdateRequest {
   tools?: string[];
   icon?: string | null;
   category_ids?: string[];
+}
+
+// ── Agent flows (Flow Designer) ────────────────────────────────────────────────
+
+export interface FlowGraph {
+  nodes: Record<string, unknown>[];
+  edges: Record<string, unknown>[];
+  version: string;
+}
+
+export interface AgentFlowSummary {
+  id: string;
+  owner_user_id: string;
+  name: string;
+  description?: string | null;
+  node_count: number;
+  edge_count: number;
+  created_at: string;
+  updated_at: string;
+  schedule_enabled?: boolean | null;
+  schedule_frequency?: string | null;
+  next_run_at?: string | null;
+  last_run_at?: string | null;
+  last_run_status?: string | null;
+}
+
+export interface AgentFlow extends AgentFlowSummary {
+  graph: FlowGraph;
+}
+
+export type FlowFrequency = "once" | "hourly" | "daily" | "weekly";
+
+export interface FlowSchedule {
+  id: string;
+  flow_id: string;
+  enabled: boolean;
+  frequency: FlowFrequency;
+  run_at?: string | null;
+  interval_minutes?: number | null;
+  time_of_day?: string | null;
+  day_of_week?: number | null;
+  timezone: string;
+  next_run_at?: string | null;
+  last_run_at?: string | null;
+  last_status?: string | null;
+  last_error?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FlowScheduleUpsertRequest {
+  enabled: boolean;
+  frequency: FlowFrequency;
+  run_at?: string;
+  interval_minutes?: number;
+  time_of_day?: string;
+  day_of_week?: number;
+  timezone?: string;
+}
+
+export interface FlowRun {
+  id: string;
+  flow_id: string;
+  trigger: string;
+  status: string;
+  started_at: string;
+  finished_at?: string | null;
+  result: Record<string, unknown>;
+  error_message?: string | null;
+}
+
+export interface FlowCreateRequest {
+  name: string;
+  description?: string;
+  graph?: FlowGraph;
+}
+
+export interface FlowUpdateRequest {
+  name?: string;
+  description?: string;
+  graph?: FlowGraph;
 }
 
 export interface Conversation {
@@ -452,4 +552,6 @@ export interface GuestSettings {
   preferredProvider: string;
   /** Per-provider model preference: { "openai": "gpt-4o-mini", ... } */
   preferredModelByProvider: Record<string, string>;
+  /** Per-provider model catalog (enable/disable, custom models). */
+  providerModels: Record<string, ProviderModelEntry[]>;
 }

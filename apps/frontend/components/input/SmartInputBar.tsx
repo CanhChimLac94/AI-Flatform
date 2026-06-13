@@ -103,7 +103,7 @@ export function SmartInputBar({ onSend, onStop, isStreaming, disabled }: SmartIn
           onChange={(e) => { setValue(e.target.value.slice(0, MAX_CHARS)); autoResize(); }}
           onKeyDown={handleKeyDown}
           rows={1}
-          placeholder="Message Omni AI…"
+          placeholder="Message AI Hub…"
           disabled={isBusy}
           className="flex-1 bg-transparent resize-none outline-none text-sm text-gray-100 placeholder-gray-500 leading-relaxed py-1 max-h-[200px] overflow-y-auto"
         />

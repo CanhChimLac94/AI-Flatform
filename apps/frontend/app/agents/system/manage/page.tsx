@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ServerStackIcon, PlusIcon, ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { ServerStackIcon, PlusIcon, ArrowLeftIcon, FolderIcon, CpuChipIcon } from "@heroicons/react/24/outline";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CategoryFilter } from "@/components/agents/CategoryFilter";
@@ -26,6 +26,12 @@ import {
 } from "@/lib/api";
 
 type FormMode = { type: "create" } | { type: "edit"; agent: SystemAgent } | null;
+type ManageTab = "agents" | "categories";
+
+const TABS: { id: ManageTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: "agents", label: "Agents", icon: CpuChipIcon },
+  { id: "categories", label: "Nhóm phân loại", icon: FolderIcon },
+];
 
 export default function SystemAgentsManagePage() {
   const router = useRouter();
@@ -37,6 +43,7 @@ export default function SystemAgentsManagePage() {
   const [error, setError] = useState<string | null>(null);
   const [formMode, setFormMode] = useState<FormMode>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<SystemAgent | null>(null);
+  const [activeTab, setActiveTab] = useState<ManageTab>("agents");
 
   useEffect(() => {
     if (isAuthReady && !isAdmin) {
@@ -108,6 +115,15 @@ export default function SystemAgentsManagePage() {
             Admin
           </span>
         }
+        center={
+          activeTab === "agents" ? (
+            <CategoryFilter
+              categories={categories}
+              selectedId={selectedCategory}
+              onSelect={setSelectedCategory}
+            />
+          ) : undefined
+        }
         actions={
           <div className="flex items-center gap-2">
             <Link
@@ -118,17 +134,48 @@ export default function SystemAgentsManagePage() {
               <ArrowLeftIcon className="w-4 h-4" />
               <span className="hidden sm:inline">Thư viện</span>
             </Link>
-            <button
-              onClick={() => setFormMode({ type: "create" })}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors"
-              title="Agent mới"
-            >
-              <PlusIcon className="w-4 h-4" />
-              <span className="hidden sm:inline">Agent mới</span>
-            </button>
+            {activeTab === "agents" && (
+              <button
+                onClick={() => setFormMode({ type: "create" })}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors"
+                title="Agent mới"
+              >
+                <PlusIcon className="w-4 h-4" />
+                <span className="hidden sm:inline">Agent mới</span>
+              </button>
+            )}
           </div>
         }
       />
+
+      <div className="shrink-0 border-b border-gray-700 px-4 sm:px-6">
+        <div
+          role="tablist"
+          aria-label="Quản lý agents hệ thống"
+          className="flex gap-1 -mb-px overflow-x-auto"
+        >
+          {TABS.map(({ id, label, icon: TabIcon }) => {
+            const selected = activeTab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => setActiveTab(id)}
+                className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 ${
+                  selected
+                    ? "border-emerald-400 text-emerald-300"
+                    : "border-transparent text-gray-500 hover:text-gray-300 hover:border-gray-600"
+                }`}
+              >
+                <TabIcon className="w-4 h-4 shrink-0" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-6">
@@ -138,32 +185,41 @@ export default function SystemAgentsManagePage() {
             </div>
           )}
 
-          <CategoryManager categories={categories} onChange={() => { void load(); }} />
-
-          <CategoryFilter
-            categories={categories}
-            selectedId={selectedCategory}
-            onSelect={setSelectedCategory}
-          />
-
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-44 bg-gray-800 rounded-xl animate-pulse" />
-              ))}
-            </div>
+          {activeTab === "agents" ? (
+            loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-44 bg-gray-800 rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : agents.length === 0 ? (
+              <div className="text-center py-16 flex flex-col items-center gap-3">
+                <CpuChipIcon className="w-12 h-12 text-gray-600" />
+                <p className="text-gray-400 text-sm">Chưa có agent trong nhóm này.</p>
+                <button
+                  type="button"
+                  onClick={() => setFormMode({ type: "create" })}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg transition-colors"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  Tạo agent đầu tiên
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {agents.map((agent) => (
+                  <SystemAgentCard
+                    key={agent.id}
+                    agent={agent}
+                    isAdmin
+                    onEdit={(a) => setFormMode({ type: "edit", agent: a })}
+                    onDelete={(a) => setDeleteConfirm(a)}
+                  />
+                ))}
+              </div>
+            )
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {agents.map((agent) => (
-                <SystemAgentCard
-                  key={agent.id}
-                  agent={agent}
-                  isAdmin
-                  onEdit={(a) => setFormMode({ type: "edit", agent: a })}
-                  onDelete={(a) => setDeleteConfirm(a)}
-                />
-              ))}
-            </div>
+            <CategoryManager embedded categories={categories} onChange={() => { void load(); }} />
           )}
         </div>
       </main>

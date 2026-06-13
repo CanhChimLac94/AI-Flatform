@@ -25,7 +25,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import get_current_user
+from app.api.dependencies import get_current_user, get_optional_user
 from app.db.session import get_db
 from app.models.user import User
 from app.models.user_api_key import SUPPORTED_PROVIDERS
@@ -35,6 +35,19 @@ from app.services.encryption import encrypt_key, decrypt_key, mask_key
 from app.services.provider_registry import (
     REGISTRY, ALL_PROVIDERS, DEFAULT_PROVIDER, DEFAULT_MODEL,
     get_models, test_provider_key,
+)
+from app.repositories.user_provider_model import UserProviderModelRepository
+from app.schemas.provider_model import (
+    CreateProviderModelRequest,
+    ProviderModelEntryOut,
+    ProviderModelGroupOut,
+    UpdateProviderModelRequest,
+)
+from app.services.provider_models import (
+    enabled_model_ids,
+    ensure_provider_seeded,
+    list_provider_entries,
+    list_provider_groups,
 )
 from app.services.user_keys import invalidate_cache
 
@@ -417,8 +430,136 @@ async def list_providers():
 
 
 @router.get("/providers/{provider_id}/models", response_model=list[str])
-async def get_provider_models(provider_id: str):
-    """Returns the static model list for a provider.  No auth required."""
+async def get_provider_models(
+    provider_id: str,
+    current_user: User | None = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Returns enabled models for the user catalog, or static registry for guests."""
     if provider_id not in REGISTRY:
         raise HTTPException(status_code=404, detail=f"Unknown provider: {provider_id}")
+    if current_user is not None:
+        return await enabled_model_ids(db, current_user.id, provider_id)
     return get_models(provider_id)
+
+
+# ── Per-user provider model catalog ───────────────────────────────────────────
+
+@router.get("/provider-models", response_model=list[ProviderModelGroupOut])
+async def list_all_provider_models(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    groups = await list_provider_groups(db, current_user.id)
+    return [
+        ProviderModelGroupOut(
+            provider=g["provider"],
+            provider_name=g["provider_name"],
+            models=[ProviderModelEntryOut.model_validate(m) for m in g["models"]],
+        )
+        for g in groups
+    ]
+
+
+@router.get("/provider-models/{provider}", response_model=ProviderModelGroupOut)
+async def list_provider_model_entries(
+    provider: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _validate_provider(provider)
+    rows = await list_provider_entries(db, current_user.id, provider)
+    info = REGISTRY.get(provider)
+    return ProviderModelGroupOut(
+        provider=provider,
+        provider_name=info["name"] if info else provider,
+        models=[ProviderModelEntryOut.model_validate(r) for r in rows],
+    )
+
+
+@router.post(
+    "/provider-models/{provider}",
+    status_code=status.HTTP_201_CREATED,
+    response_model=ProviderModelEntryOut,
+)
+async def create_provider_model(
+    provider: str,
+    body: CreateProviderModelRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _validate_provider(provider)
+    await ensure_provider_seeded(db, current_user.id, provider)
+
+    repo = UserProviderModelRepository(db)
+    if await repo.get_by_model_id(current_user.id, provider, body.model_id):
+        raise HTTPException(status_code=409, detail="Model already exists for this provider")
+
+    existing = await repo.list_for_provider(current_user.id, provider)
+    row = await repo.create(
+        user_id=current_user.id,
+        provider=provider,
+        model_id=body.model_id,
+        display_name=body.display_name,
+        is_enabled=True,
+        is_builtin=False,
+        sort_order=len(existing),
+    )
+    await db.commit()
+    await db.refresh(row)
+    return ProviderModelEntryOut.model_validate(row)
+
+
+@router.patch("/provider-models/{provider}/{entry_id}", response_model=ProviderModelEntryOut)
+async def update_provider_model(
+    provider: str,
+    entry_id: UUID,
+    body: UpdateProviderModelRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _validate_provider(provider)
+    repo = UserProviderModelRepository(db)
+    row = await repo.get_for_user(current_user.id, entry_id)
+    if not row or row.provider != provider:
+        raise HTTPException(status_code=404, detail="Model entry not found")
+
+    if body.model_id is not None:
+        if row.is_builtin:
+            raise HTTPException(status_code=400, detail="Cannot change model_id of a built-in entry")
+        if body.model_id != row.model_id:
+            conflict = await repo.get_by_model_id(current_user.id, provider, body.model_id)
+            if conflict:
+                raise HTTPException(status_code=409, detail="Model already exists for this provider")
+            row.model_id = body.model_id
+
+    if body.display_name is not None:
+        row.display_name = body.display_name
+    if body.is_enabled is not None:
+        row.is_enabled = body.is_enabled
+
+    await db.commit()
+    await db.refresh(row)
+    return ProviderModelEntryOut.model_validate(row)
+
+
+@router.delete("/provider-models/{provider}/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_provider_model(
+    provider: str,
+    entry_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _validate_provider(provider)
+    repo = UserProviderModelRepository(db)
+    row = await repo.get_for_user(current_user.id, entry_id)
+    if not row or row.provider != provider:
+        raise HTTPException(status_code=404, detail="Model entry not found")
+    if row.is_builtin:
+        raise HTTPException(
+            status_code=400,
+            detail="Built-in models cannot be deleted; disable them instead",
+        )
+
+    await repo.delete_for_user(current_user.id, entry_id)
+    await db.commit()

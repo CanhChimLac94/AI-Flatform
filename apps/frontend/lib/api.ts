@@ -3,8 +3,11 @@ import type {
   Agent, AgentCreateRequest, AgentUpdateRequest,
   AgentKnowledgeFile, AgentCategory, AgentCategoryCreateRequest, AgentCategoryUpdateRequest, SystemAgent,
   SystemAgentCreateRequest, SystemAgentUpdateRequest,
+  AgentFlow, AgentFlowSummary, FlowCreateRequest, FlowUpdateRequest,
+  FlowSchedule, FlowScheduleUpsertRequest, FlowRun,
   UserSettings, ProviderCatalogItem, TestKeyResult,
   StoredKeyInfo, ProviderKeyGroup, AttachmentRef,
+  ProviderModelEntry, ProviderModelGroup,
 } from "./types";
 import {
   clearAuthStorage,
@@ -272,6 +275,64 @@ export async function duplicateAgent(id: string): Promise<Agent> {
   return request<Agent>(`/agents/${id}/duplicate`, { method: "POST" });
 }
 
+// ── Agent flows ───────────────────────────────────────────────────────────────
+
+export async function listFlows(): Promise<AgentFlowSummary[]> {
+  return request<AgentFlowSummary[]>("/flows");
+}
+
+export async function getFlow(id: string): Promise<AgentFlow> {
+  return request<AgentFlow>(`/flows/${id}`);
+}
+
+export async function createFlow(body: FlowCreateRequest): Promise<AgentFlow> {
+  return request<AgentFlow>("/flows", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateFlow(id: string, body: FlowUpdateRequest): Promise<AgentFlow> {
+  return request<AgentFlow>(`/flows/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteFlow(id: string): Promise<void> {
+  await request(`/flows/${id}`, { method: "DELETE" });
+}
+
+export async function duplicateFlow(id: string): Promise<AgentFlow> {
+  return request<AgentFlow>(`/flows/${id}/duplicate`, { method: "POST" });
+}
+
+export async function getFlowSchedule(flowId: string): Promise<FlowSchedule> {
+  return request<FlowSchedule>(`/flows/${flowId}/schedule`);
+}
+
+export async function upsertFlowSchedule(
+  flowId: string,
+  body: FlowScheduleUpsertRequest,
+): Promise<FlowSchedule> {
+  return request<FlowSchedule>(`/flows/${flowId}/schedule`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteFlowSchedule(flowId: string): Promise<void> {
+  await request(`/flows/${flowId}/schedule`, { method: "DELETE" });
+}
+
+export async function runFlowNow(flowId: string): Promise<FlowRun> {
+  return request<FlowRun>(`/flows/${flowId}/run`, { method: "POST" });
+}
+
+export async function listFlowRuns(flowId: string): Promise<FlowRun[]> {
+  return request<FlowRun[]>(`/flows/${flowId}/runs`);
+}
+
 // ── System agents (shared catalog) ────────────────────────────────────────────
 
 export async function listAgentCategories(): Promise<AgentCategory[]> {
@@ -373,6 +434,41 @@ export async function listProviders(): Promise<ProviderCatalogItem[]> {
 
 export async function fetchProviderModels(provider: string): Promise<string[]> {
   return request<string[]>(`/settings/providers/${provider}/models`);
+}
+
+// ── Provider model catalog (per channel) ─────────────────────────────────────
+
+export async function listProviderModelGroups(): Promise<ProviderModelGroup[]> {
+  return request<ProviderModelGroup[]>("/settings/provider-models");
+}
+
+export async function listProviderModelsForChannel(provider: string): Promise<ProviderModelGroup> {
+  return request<ProviderModelGroup>(`/settings/provider-models/${provider}`);
+}
+
+export async function createProviderModel(
+  provider: string,
+  body: { model_id: string; display_name?: string | null },
+): Promise<ProviderModelEntry> {
+  return request<ProviderModelEntry>(`/settings/provider-models/${provider}`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateProviderModel(
+  provider: string,
+  entryId: string,
+  body: { model_id?: string; display_name?: string | null; is_enabled?: boolean },
+): Promise<ProviderModelEntry> {
+  return request<ProviderModelEntry>(`/settings/provider-models/${provider}/${entryId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteProviderModel(provider: string, entryId: string): Promise<void> {
+  await request(`/settings/provider-models/${provider}/${entryId}`, { method: "DELETE" });
 }
 
 export async function testProviderKey(

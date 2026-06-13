@@ -243,5 +243,7 @@ async def duplicate_system_agent_to_personal(
         is_public=False,
         is_system=False,
     )
+    if source.categories:
+        await personal_repo.set_categories(copy, list(source.categories))
     await db.commit()
     return {"id": str(copy.id), "name": copy.name}

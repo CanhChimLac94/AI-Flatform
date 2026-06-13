@@ -1,10 +1,11 @@
 import type { Node, Edge } from "@xyflow/react";
+import type { FlowIconKey } from "./flowIcons";
 
 export const FLOW_TEMPLATES: {
   id: string;
   label: string;
   description: string;
-  icon: string;
+  icon: FlowIconKey;
   nodes: Node[];
   edges: Edge[];
 }[] = [
@@ -32,7 +33,7 @@ export const FLOW_TEMPLATES: {
     id: "content-strategy",
     label: "Content Marketing",
     description: "Nghiên cứu chủ đề và sản xuất nội dung đa kênh.",
-    icon: "edit_note",
+    icon: "document-text",
     nodes: [
       { id: "start-1", type: "start", position: { x: 50, y: 150 }, data: { label: "Chủ đề gốc", value: "Chủ đề: Tương lai của AI trong năm 2025" } },
       { id: "agent-1", type: "agent", position: { x: 400, y: 150 }, data: { label: "Researcher", prompt: "Tìm kiếm xu hướng và số liệu thống kê.", model: "Gemini" } },

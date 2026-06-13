@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS: GuestSettings = {
   apiKeys: {},
   preferredProvider: "openai",
   preferredModelByProvider: {},
+  providerModels: {},
 };
 
 export function loadGuestSettings(): GuestSettings {
@@ -28,6 +29,7 @@ export function loadGuestSettings(): GuestSettings {
       apiKeys:                   parsed.apiKeys ?? {},
       preferredProvider:         parsed.preferredProvider ?? DEFAULT_SETTINGS.preferredProvider,
       preferredModelByProvider:  parsed.preferredModelByProvider ?? {},
+      providerModels:            parsed.providerModels ?? {},
     };
   } catch {
     return { ...DEFAULT_SETTINGS };

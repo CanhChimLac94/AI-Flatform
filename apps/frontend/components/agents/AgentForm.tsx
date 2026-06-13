@@ -2,13 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import { DocumentArrowUpIcon, TrashIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import type { Agent, AgentCreateRequest, AgentKnowledgeFile, AgentUpdateRequest } from "@/lib/types";
+import type { Agent, AgentCategory, AgentCreateRequest, AgentKnowledgeFile, AgentUpdateRequest } from "@/lib/types";
 import { PROVIDERS } from "@/lib/types";
 import { deleteKnowledgeFile, listKnowledgeFiles, uploadKnowledgeFile } from "@/lib/api";
 import { IconPicker } from "./IconPicker";
+import { AgentIcon } from "./AgentIcon";
+import { categoryBadgeClass } from "./CategoryBadge";
 
 interface Props {
   initial?: Agent;
+  categories?: AgentCategory[];
   onSubmit: (data: AgentCreateRequest | AgentUpdateRequest) => Promise<void>;
   onCancel: () => void;
 }
@@ -23,7 +26,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function AgentForm({ initial, onSubmit, onCancel }: Props) {
+export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Props) {
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [systemPrompt, setSystemPrompt] = useState(initial?.system_prompt ?? "");
@@ -31,6 +34,9 @@ export function AgentForm({ initial, onSubmit, onCancel }: Props) {
   const [tools, setTools] = useState<string[]>(initial?.tools ?? []);
   const [isPublic, setIsPublic] = useState(initial?.is_public ?? false);
   const [icon, setIcon] = useState<string | null>(initial?.icon ?? null);
+  const [categoryIds, setCategoryIds] = useState<string[]>(
+    initial?.categories?.map((c) => c.id) ?? [],
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,6 +60,12 @@ export function AgentForm({ initial, onSubmit, onCancel }: Props) {
     );
   };
 
+  const toggleCategory = (id: string) => {
+    setCategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) { setError("Name is required"); return; }
@@ -68,6 +80,7 @@ export function AgentForm({ initial, onSubmit, onCancel }: Props) {
         tools,
         is_public: isPublic,
         icon,
+        category_ids: categoryIds,
       });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -146,6 +159,32 @@ export function AgentForm({ initial, onSubmit, onCancel }: Props) {
               className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
             />
           </div>
+
+          {categories.length > 0 && (
+            <div>
+              <label className="block text-xs text-gray-400 mb-1.5">Nhóm phân loại (chọn nhiều)</label>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((cat) => {
+                  const selected = categoryIds.includes(cat.id);
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => toggleCategory(cat.id)}
+                      className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                        selected
+                          ? "bg-accent text-white border-accent"
+                          : `${categoryBadgeClass(cat.color)} opacity-70 hover:opacity-100`
+                      }`}
+                    >
+                      <AgentIcon icon={cat.icon} name={cat.name} className="w-3.5 h-3.5 shrink-0" />
+                      {cat.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-xs text-gray-400 mb-1.5">System prompt</label>

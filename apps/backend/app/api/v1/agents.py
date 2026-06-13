@@ -22,7 +22,9 @@ from app.db.session import get_db
 from app.models.agent_knowledge import AgentKnowledgeFile
 from app.models.user import User
 from app.repositories.agent import AgentRepository
+from app.repositories.system_agent import AgentCategoryRepository, SystemAgentRepository
 from app.schemas.agent import AgentCreate, AgentOut, AgentUpdate
+from app.schemas.system_agent import AgentCategoryOut
 
 UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent.parent / "uploads"
 UPLOADS_DIR.mkdir(exist_ok=True)
@@ -45,6 +47,24 @@ class KnowledgeFileOut(BaseModel):
 router = APIRouter(prefix="/agents", tags=["agents"])
 
 
+def _agent_out(agent) -> AgentOut:
+    return AgentOut(
+        id=agent.id,
+        owner_user_id=agent.owner_user_id,
+        name=agent.name,
+        description=agent.description,
+        system_prompt=agent.system_prompt,
+        model=agent.model,
+        params=agent.params,
+        tools=agent.tools,
+        is_public=agent.is_public,
+        icon=agent.icon,
+        categories=[AgentCategoryOut.model_validate(c) for c in agent.categories],
+        created_at=agent.created_at,
+        updated_at=agent.updated_at,
+    )
+
+
 @router.get("", response_model=list[AgentOut])
 async def list_agents(
     current_user: User = Depends(get_current_user),
@@ -52,7 +72,8 @@ async def list_agents(
 ):
     """Returns all agents owned by the authenticated user."""
     repo = AgentRepository(db)
-    return await repo.list_for_user(current_user.id)
+    agents = await repo.list_for_user(current_user.id)
+    return [_agent_out(a) for a in agents]
 
 
 @router.post("", response_model=AgentOut, status_code=status.HTTP_201_CREATED)
@@ -62,6 +83,7 @@ async def create_agent(
     db: AsyncSession = Depends(get_db),
 ):
     repo = AgentRepository(db)
+    cat_repo = AgentCategoryRepository(db)
     agent = await repo.create(
         owner_user_id=current_user.id,
         name=body.name,
@@ -73,8 +95,12 @@ async def create_agent(
         icon=body.icon,
         is_public=body.is_public,
     )
+    if body.category_ids:
+        categories = await cat_repo.get_by_ids(body.category_ids)
+        await repo.set_categories(agent, categories)
     await db.commit()
-    return agent
+    loaded = await repo.get_with_categories(agent.id)
+    return _agent_out(loaded or agent)
 
 
 @router.get("/{agent_id}", response_model=AgentOut)
@@ -84,14 +110,14 @@ async def get_agent(
     db: AsyncSession = Depends(get_db),
 ):
     repo = AgentRepository(db)
-    agent = await repo.get(agent_id)
+    agent = await repo.get_with_categories(agent_id)
     if agent is None:
         raise HTTPException(status_code=404, detail="Agent not found")
     if agent.is_system:
-        return agent
+        return _agent_out(agent)
     if str(agent.owner_user_id) != str(current_user.id) and not agent.is_public:
         raise HTTPException(status_code=403, detail="Access denied")
-    return agent
+    return _agent_out(agent)
 
 
 @router.patch("/{agent_id}", response_model=AgentOut)
@@ -102,6 +128,7 @@ async def update_agent(
     db: AsyncSession = Depends(get_db),
 ):
     repo = AgentRepository(db)
+    cat_repo = AgentCategoryRepository(db)
     agent = await repo.get_owned(agent_id, current_user.id)
     if agent is None:
         raise HTTPException(status_code=404, detail="Agent not found or access denied")
@@ -122,10 +149,14 @@ async def update_agent(
         agent.icon = body.icon
     if body.is_public is not None:
         agent.is_public = body.is_public
+    if body.category_ids is not None:
+        categories = await cat_repo.get_by_ids(body.category_ids)
+        await repo.set_categories(agent, categories)
 
     await repo.save(agent)
     await db.commit()
-    return agent
+    loaded = await repo.get_with_categories(agent.id)
+    return _agent_out(loaded or agent)
 
 
 @router.delete("/{agent_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -150,7 +181,11 @@ async def duplicate_agent(
 ):
     """Creates a copy of an agent owned by (or public to) the caller."""
     repo = AgentRepository(db)
-    source = await repo.get(agent_id)
+    cat_repo = AgentCategoryRepository(db)
+    sys_repo = SystemAgentRepository(db)
+    source = await repo.get_with_categories(agent_id)
+    if source is None:
+        source = await sys_repo.get_system(agent_id)
     if source is None:
         raise HTTPException(status_code=404, detail="Agent not found")
     if not source.is_system and str(source.owner_user_id) != str(current_user.id) and not source.is_public:
@@ -167,8 +202,11 @@ async def duplicate_agent(
         icon=source.icon,
         is_public=False,
     )
+    if source.categories:
+        await repo.set_categories(copy, list(source.categories))
     await db.commit()
-    return copy
+    loaded = await repo.get_with_categories(copy.id)
+    return _agent_out(loaded or copy)
 
 
 # ── Knowledge files ───────────────────────────────────────────────────────────

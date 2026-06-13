@@ -47,9 +47,15 @@ class User(Base):
     agents: Mapped[list["Agent"]] = relationship(
         back_populates="owner", cascade="all, delete-orphan"
     )
+    agent_flows: Mapped[list["AgentFlow"]] = relationship(
+        back_populates="owner", cascade="all, delete-orphan"
+    )
     memories: Mapped[list["UserMemory"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
     daily_usage: Mapped[list["DailyUsage"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    provider_models: Mapped[list["UserProviderModel"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )

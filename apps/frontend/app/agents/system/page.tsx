@@ -67,6 +67,13 @@ export default function SystemAgentsPage() {
         icon={ServerStackIcon}
         iconClassName="text-emerald-400"
         title="Agents hệ thống"
+        center={
+          <CategoryFilter
+            categories={categories}
+            selectedId={selectedCategory}
+            onSelect={setSelectedCategory}
+          />
+        }
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link
@@ -107,12 +114,6 @@ export default function SystemAgentsPage() {
               {error}
             </div>
           )}
-
-          <CategoryFilter
-            categories={categories}
-            selectedId={selectedCategory}
-            onSelect={setSelectedCategory}
-          />
 
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

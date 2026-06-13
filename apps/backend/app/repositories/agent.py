@@ -1,9 +1,11 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.agent import Agent
+from app.models.agent_category import AgentCategory, agent_category_links
 from app.repositories.base import BaseRepository
 
 
@@ -19,9 +21,30 @@ class AgentRepository(BaseRepository[Agent]):
                 Agent.owner_user_id == owner_user_id,
                 Agent.is_system.is_(False),
             )
+            .options(selectinload(Agent.categories))
             .order_by(Agent.created_at.desc())
         )
-        return list(result.scalars().all())
+        return list(result.scalars().unique().all())
+
+    async def get_with_categories(self, agent_id: UUID) -> Agent | None:
+        result = await self.session.execute(
+            select(Agent)
+            .where(Agent.id == agent_id)
+            .options(selectinload(Agent.categories))
+        )
+        return result.scalar_one_or_none()
+
+    async def set_categories(self, agent: Agent, categories: list[AgentCategory]) -> None:
+        await self.session.execute(
+            delete(agent_category_links).where(agent_category_links.c.agent_id == agent.id)
+        )
+        if categories:
+            await self.session.execute(
+                insert(agent_category_links),
+                [{"agent_id": agent.id, "category_id": c.id} for c in categories],
+            )
+        self.session.expire(agent, ["categories"])
+        await self.session.flush()
 
     async def list_public(self) -> list[Agent]:
         """Returns all public agents (for discovery)."""

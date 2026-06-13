@@ -21,5 +21,5 @@ async def get_telegram_link_code(current_user: User = Depends(get_current_user))
     code = await generate_link_code(str(current_user.id))
     return LinkCodeResponse(
         code=code,
-        instructions=f"Send /link {code} to the Omni AI Telegram bot within 10 minutes.",
+        instructions=f"Send /link {code} to the AI Hub Telegram bot within 10 minutes.",
     )

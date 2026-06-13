@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ReactFlow,
   addEdge,
@@ -18,25 +20,25 @@ import { StartNode, AgentNode, OutputNode } from "./CustomNodes";
 import { DraggableNodeItem } from "./DraggableNodeItem";
 import { TemplateItem } from "./TemplateItem";
 import { FLOW_TEMPLATES } from "./constants";
+import { FlowAgentDraggableItem } from "./FlowAgentDraggableItem";
+import { FlowAgentCategorySection } from "./FlowAgentCategorySection";
+import { FlowCategoryFilter } from "./FlowCategoryFilter";
+import { useFlowAgents } from "./useFlowAgents";
+import { filterAgentGroupsByCategory, filterAgentsByCategory } from "./flowAgentPalette";
 import type { NodeType } from "./types";
 import { downloadOutputFile, isExportableOutput } from "./outputExport";
 import type { OutputFileFormat } from "./outputExport";
 import { MobileMenuButton } from "@/components/layout/MobileMenuButton";
+import { useAuth } from "@/contexts/AuthContext";
+import { FlowIcon } from "./flowIcons";
+import { createFlow, getFlow, updateFlow } from "@/lib/api";
+import { createGuestFlow, getGuestFlow, updateGuestFlow } from "@/lib/flowStore";
 
 const nodeTypes = {
   start: StartNode,
   agent: AgentNode,
   output: OutputNode,
 };
-
-const SAMPLE_ROLES = [
-  { label: "Business Analysis", prompt: "Phân tích yêu cầu nghiệp vụ và tạo đặc tả chức năng.", icon: "analytics", color: "text-blue-300" },
-  { label: "UI/UX Designer", prompt: "Thiết kế giao diện người dùng và trải nghiệm tương tác.", icon: "palette", color: "text-pink-300" },
-  { label: "System Architect", prompt: "Thiết kế kiến trúc hạ tầng và sơ đồ cơ sở dữ liệu.", icon: "layers", color: "text-amber-300" },
-  { label: "Fullstack Dev", prompt: "Triển khai logic backend và giao diện frontend.", icon: "terminal", color: "text-emerald-300" },
-  { label: "QA Tester", prompt: "Kiểm thử các trường hợp sử dụng và báo cáo lỗi.", icon: "fact_check", color: "text-red-300" },
-];
-
 const initialNodes: Node[] = [
   {
     id: "start-1",
@@ -63,13 +65,129 @@ function downloadJson(data: object, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function FlowEditorInner() {
+function FlowEditorInner({ flowId = null }: { flowId?: string | null }) {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
+  const { userAgents, systemAgents, systemAgentGroups, categories, sampleAgents, loading: agentsLoading, error: agentsError } =
+    useFlowAgents(isAuthenticated);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [resolvedFlowId, setResolvedFlowId] = useState<string | null>(flowId);
+  const [flowName, setFlowName] = useState("");
+  const [flowLoading, setFlowLoading] = useState(Boolean(flowId));
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const { screenToFlowPosition, fitView, getNodes, getEdges } = useReactFlow();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!flowId) {
+      setResolvedFlowId(null);
+      setFlowName("");
+      setFlowLoading(false);
+      setSaveError(null);
+      setNodes(initialNodes);
+      setEdges([]);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      setFlowLoading(true);
+      setSaveError(null);
+      try {
+        const flow = isAuthenticated
+          ? await getFlow(flowId)
+          : getGuestFlow(flowId);
+        if (!flow) {
+          throw new Error("Không tìm thấy flow hoặc bạn không có quyền truy cập.");
+        }
+        if (cancelled) return;
+        setResolvedFlowId(flow.id);
+        setFlowName(flow.name);
+        setNodes((flow.graph.nodes ?? []) as Node[]);
+        setEdges((flow.graph.edges ?? []) as Edge[]);
+        setTimeout(() => fitView({ padding: 0.2 }), 80);
+      } catch (e: unknown) {
+        if (!cancelled) {
+          setSaveError(e instanceof Error ? e.message : "Không tải được flow");
+        }
+      } finally {
+        if (!cancelled) setFlowLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [flowId, isAuthenticated, fitView, setNodes, setEdges]);
+
+  const saveFlow = useCallback(async () => {
+    setSaving(true);
+    setSaveError(null);
+    const graph = {
+      nodes: getNodes(),
+      edges: getEdges(),
+      version: "1.0",
+    };
+
+    try {
+      if (isAuthenticated) {
+        if (resolvedFlowId) {
+          await updateFlow(resolvedFlowId, { graph });
+        } else {
+          const created = await createFlow({
+            name: flowName || `Flow ${new Date().toLocaleDateString("vi-VN")}`,
+            graph,
+          });
+          setResolvedFlowId(created.id);
+          setFlowName(created.name);
+          router.replace(`/agents/flow/${created.id}`);
+        }
+      } else if (resolvedFlowId) {
+        updateGuestFlow(resolvedFlowId, { graph });
+      } else {
+        const created = createGuestFlow({
+          name: flowName || "Flow mới",
+          graph,
+        });
+        setResolvedFlowId(created.id);
+        setFlowName(created.name);
+        router.replace(`/agents/flow/${created.id}`);
+      }
+    } catch (e: unknown) {
+      setSaveError(e instanceof Error ? e.message : "Lưu flow thất bại");
+    } finally {
+      setSaving(false);
+    }
+  }, [flowName, getEdges, getNodes, isAuthenticated, resolvedFlowId, router]);
+
+  const hasUncategorizedAgents = useMemo(
+    () =>
+      [...userAgents, ...systemAgents].some((a) => !a.categories?.length),
+    [userAgents, systemAgents],
+  );
+
+  const filteredUserAgents = useMemo(
+    () => filterAgentsByCategory(userAgents, categoryFilter),
+    [userAgents, categoryFilter],
+  );
+
+  const filteredSystemGroups = useMemo(
+    () => filterAgentGroupsByCategory(systemAgentGroups, categoryFilter),
+    [systemAgentGroups, categoryFilter],
+  );
+
+  const filteredSystemAgents = useMemo(
+    () => filterAgentsByCategory(systemAgents, categoryFilter),
+    [systemAgents, categoryFilter],
+  );
+
+  const hasFilteredAgents =
+    filteredUserAgents.length > 0 || filteredSystemAgents.length > 0;
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true }, eds)),
@@ -203,7 +321,7 @@ function FlowEditorInner() {
           label: type === "agent" ? "AI Agent mới" : type === "output" ? "Kết quả mới" : "Đầu vào mới",
           prompt: "",
           model: "Gemini",
-          isEditing: true,
+          isEditing: !customData.agentId,
           ...customData,
         },
       };
@@ -225,6 +343,11 @@ function FlowEditorInner() {
 
   return (
     <div className="flow-designer flex h-full w-full bg-[#0e0e0e] overflow-hidden relative">
+      {flowLoading && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <p className="text-sm text-white/70">Đang tải flow...</p>
+        </div>
+      )}
       {panelOpen && (
         <button
           type="button"
@@ -250,7 +373,7 @@ function FlowEditorInner() {
               onClick={clearCanvas}
               className="w-8 h-8 rounded-lg hover:bg-red-500/20 text-red-400/50 hover:text-red-400 transition-all flex items-center justify-center cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px]">layers_clear</span>
+              <FlowIcon icon="trash" className="w-[18px] h-[18px]" />
             </button>
             <button
               type="button"
@@ -258,7 +381,7 @@ function FlowEditorInner() {
               className="lg:hidden w-8 h-8 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-all flex items-center justify-center"
               aria-label="Close panel"
             >
-              <span className="material-symbols-outlined text-[18px]">close</span>
+              <FlowIcon icon="close" className="w-[18px] h-[18px]" />
             </button>
           </div>
         </div>
@@ -267,15 +390,15 @@ function FlowEditorInner() {
           <div className="flex flex-col gap-3">
             <h3 className="text-[9px] font-bold text-white/20 uppercase tracking-widest px-1">Node cơ bản</h3>
             <div className="flex flex-col gap-2">
-              <DraggableNodeItem type="start" label="Đầu vào (Trigger)" icon="login" color="text-blue-400" />
-              <DraggableNodeItem type="agent" label="AI Agent (Xử lý)" icon="smart_toy" color="text-purple-400" />
+              <DraggableNodeItem type="start" label="Đầu vào (Trigger)" icon="input" color="text-blue-400" />
+              <DraggableNodeItem type="agent" label="AI Agent (Xử lý)" icon="agent" color="text-purple-400" />
               <DraggableNodeItem type="output" label="Kết quả (Output)" icon="terminal" color="text-green-400" />
             </div>
           </div>
 
           <div className="flex flex-col gap-3">
             <h3 className="text-[9px] font-bold text-blue-400 uppercase tracking-widest px-1 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+              <FlowIcon icon="sparkles" className="w-[14px] h-[14px]" />
               Mẫu Flow chuẩn
             </h3>
             <div className="flex flex-col gap-2">
@@ -292,19 +415,83 @@ function FlowEditorInner() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <h3 className="text-[9px] font-bold text-white/20 uppercase tracking-widest px-1">Vai trò AI Agent</h3>
-            <div className="flex flex-col gap-2">
-              {SAMPLE_ROLES.map((role) => (
-                <DraggableNodeItem
-                  key={role.label}
-                  type="agent"
-                  label={role.label}
-                  icon={role.icon}
-                  color={role.color}
-                  data={{ label: role.label, prompt: role.prompt }}
-                />
-              ))}
-            </div>
+            <h3 className="text-[9px] font-bold text-white/20 uppercase tracking-widest px-1">AI Agents</h3>
+            {agentsError && (
+              <p className="text-[10px] text-red-400/80 px-1 leading-relaxed">{agentsError}</p>
+            )}
+            {agentsLoading ? (
+              <div className="flex flex-col gap-2">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-12 rounded-xl bg-white/5 animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {(userAgents.length > 0 || systemAgentGroups.length > 0) && (
+                  <FlowCategoryFilter
+                    categories={categories}
+                    selectedId={categoryFilter}
+                    onSelect={setCategoryFilter}
+                    showUncategorized={hasUncategorizedAgents}
+                  />
+                )}
+
+                {categoryFilter !== null && !hasFilteredAgents && (
+                  <p className="text-[10px] text-white/30 px-1 py-1">
+                    Không có agent trong nhóm này.
+                  </p>
+                )}
+
+                {filteredUserAgents.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-[8px] font-bold text-emerald-400/60 uppercase tracking-widest px-1">
+                      Agents của tôi
+                    </p>
+                    {filteredUserAgents.map((agent) => (
+                      <FlowAgentDraggableItem key={`user-${agent.id}`} agent={agent} />
+                    ))}
+                  </div>
+                )}
+
+                {systemAgentGroups.length > 0 && filteredSystemAgents.length > 0 && (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-[8px] font-bold text-purple-400/60 uppercase tracking-widest px-1">
+                      Agents mặc định
+                    </p>
+
+                    {categoryFilter === null ? (
+                      filteredSystemGroups.map((group) => (
+                        <FlowAgentCategorySection
+                          key={group.category?.id ?? "uncategorized"}
+                          group={group}
+                        />
+                      ))
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {filteredSystemAgents.map((agent) => (
+                          <FlowAgentDraggableItem
+                            key={`system-${agent.id}`}
+                            agent={agent}
+                            showSourceBadge={false}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {userAgents.length === 0 && systemAgentGroups.length === 0 && (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-[10px] text-white/30 px-1 leading-relaxed">
+                      Chưa có agent. Dùng mẫu vai trò bên dưới hoặc tạo agent trong thư viện.
+                    </p>
+                    {sampleAgents.map((agent) => (
+                      <FlowAgentDraggableItem key={agent.id} agent={agent} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-3">
@@ -314,14 +501,14 @@ function FlowEditorInner() {
                 onClick={exportFlow}
                 className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-white/20 hover:bg-white/10 transition-all text-white/70 hover:text-white cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[18px]">download</span>
+                <FlowIcon icon="download" className="w-[18px] h-[18px]" />
                 <span className="text-[10px] font-bold uppercase tracking-tight">Export</span>
               </button>
               <button
                 onClick={handleImportClick}
                 className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-white/20 hover:bg-white/10 transition-all text-white/70 hover:text-white cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[18px]">upload</span>
+                <FlowIcon icon="upload" className="w-[18px] h-[18px]" />
                 <span className="text-[10px] font-bold uppercase tracking-tight">Import</span>
               </button>
             </div>
@@ -334,7 +521,7 @@ function FlowEditorInner() {
             disabled={isProcessing}
             className="w-full h-12 rounded-2xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 flex items-center justify-center gap-2 transition-all cursor-pointer font-bold shadow-xl active:scale-95 text-white"
           >
-            <span className="material-symbols-outlined text-[22px]">{isProcessing ? "sync" : "bolt"}</span>
+            <FlowIcon icon={isProcessing ? "sync" : "bolt"} className={`w-[22px] h-[22px] ${isProcessing ? "animate-spin" : ""}`} />
             <span className="text-[13px]">{isProcessing ? "Đang chạy..." : "Thực thi quy trình"}</span>
           </button>
         </div>
@@ -351,14 +538,29 @@ function FlowEditorInner() {
               className="lg:hidden flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-[#1a1a1a]/90 border border-white/10 text-white/70 hover:text-white text-[11px] font-bold uppercase tracking-wide backdrop-blur-md shrink-0"
               aria-label="Open flow tools"
             >
-              <span className="material-symbols-outlined text-[18px]">tune</span>
+              <FlowIcon icon="tune" className="w-[18px] h-[18px]" />
               <span className="hidden min-[480px]:inline">Tools</span>
             </button>
 
             <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 rounded-xl bg-[#1a1a1a]/90 border border-white/10 backdrop-blur-md text-[11px] min-w-0">
+              <Link
+                href="/agents/flows"
+                className="text-white/50 hover:text-white transition-colors shrink-0 hidden sm:inline"
+                title="Danh sách flow"
+              >
+                Flows
+              </Link>
+              {flowName && (
+                <>
+                  <span className="text-white/30 hidden sm:inline">/</span>
+                  <span className="text-white/80 font-medium truncate max-w-[140px] sm:max-w-[200px]">
+                    {flowName}
+                  </span>
+                </>
+              )}
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border font-semibold uppercase tracking-wide shrink-0 ${flowStatusClass}`}>
                 {(isProcessing || runningCount > 0) && (
-                  <span className="material-symbols-outlined text-[12px] animate-spin">sync</span>
+                  <FlowIcon icon="sync" className="w-3 h-3 animate-spin" />
                 )}
                 {flowStatusLabel}
               </span>
@@ -389,8 +591,23 @@ function FlowEditorInner() {
             </div>
           </div>
 
-          {/* Import / Export — top right */}
+          {/* Import / Export / Save — top right */}
           <div className="flex items-center gap-2 pointer-events-auto shrink-0">
+            {saveError && (
+              <span className="hidden lg:inline text-[10px] text-red-400 max-w-[160px] truncate" title={saveError}>
+                {saveError}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => void saveFlow()}
+              disabled={saving || flowLoading}
+              title="Lưu flow"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-indigo-600/90 border border-indigo-500/40 text-white hover:bg-indigo-500 disabled:opacity-50 transition-all text-[11px] font-bold uppercase tracking-wide backdrop-blur-md"
+            >
+              <FlowIcon icon="save" className={`w-[18px] h-[18px] ${saving ? "animate-pulse" : ""}`} />
+              <span className="hidden sm:inline">{saving ? "Đang lưu..." : "Lưu"}</span>
+            </button>
             {outputCount > 0 && (
               <button
                 type="button"
@@ -398,7 +615,7 @@ function FlowEditorInner() {
                 title="Xuất file kết quả output"
                 className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/30 text-green-300/90 hover:text-green-200 hover:border-green-500/50 hover:bg-green-500/15 transition-all text-[11px] font-bold uppercase tracking-wide backdrop-blur-md"
               >
-                <span className="material-symbols-outlined text-[18px]">file_save</span>
+                <FlowIcon icon="save" className="w-[18px] h-[18px]" />
                 <span className="hidden sm:inline">Xuất kết quả</span>
                 <span className="sm:hidden">{outputCount}</span>
               </button>
@@ -418,7 +635,7 @@ function FlowEditorInner() {
               title="Import flow JSON"
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-[#1a1a1a]/90 border border-white/10 text-white/70 hover:text-white hover:border-white/25 hover:bg-white/10 transition-all text-[11px] font-bold uppercase tracking-wide backdrop-blur-md cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px]">upload</span>
+              <FlowIcon icon="upload" className="w-[18px] h-[18px]" />
               <span className="hidden sm:inline">Import</span>
             </label>
             <button
@@ -427,7 +644,7 @@ function FlowEditorInner() {
               title="Export flow JSON"
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-[#1a1a1a]/90 border border-white/10 text-white/70 hover:text-white hover:border-white/25 hover:bg-white/10 transition-all text-[11px] font-bold uppercase tracking-wide backdrop-blur-md"
             >
-              <span className="material-symbols-outlined text-[18px]">download</span>
+              <FlowIcon icon="download" className="w-[18px] h-[18px]" />
               <span className="hidden sm:inline">Export</span>
             </button>
           </div>
@@ -455,10 +672,10 @@ function FlowEditorInner() {
   );
 }
 
-export function FlowEditor() {
+export function FlowEditor({ flowId = null }: { flowId?: string | null }) {
   return (
     <ReactFlowProvider>
-      <FlowEditorInner />
+      <FlowEditorInner flowId={flowId} />
     </ReactFlowProvider>
   );
 }

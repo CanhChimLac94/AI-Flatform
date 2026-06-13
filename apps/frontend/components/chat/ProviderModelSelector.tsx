@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { listProviders, fetchProviderModels } from '@/lib/api';
 import type { ProviderCatalogItem } from '@/lib/types';
 import { useI18n } from '@/contexts/I18nContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { guestEnabledModelIds } from '@/lib/guestProviderModels';
 
 interface ProviderModelSelectorProps {
   selectedProvider: string;
@@ -21,6 +23,7 @@ export const ProviderModelSelector: React.FC<ProviderModelSelectorProps> = ({
   disabled = false,
 }) => {
   const { t } = useI18n();
+  const { isAuthenticated } = useAuth();
   const [providers, setProviders] = useState<ProviderCatalogItem[]>([]);
   const [models, setModels] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -51,10 +54,12 @@ export const ProviderModelSelector: React.FC<ProviderModelSelectorProps> = ({
       if (!selectedProvider) return;
       try {
         setLoading(true);
-        const data = await fetchProviderModels(selectedProvider);
+        const data = isAuthenticated
+          ? await fetchProviderModels(selectedProvider)
+          : guestEnabledModelIds(selectedProvider);
         setModels(data);
-        // Set default model if none selected
-        if (!selectedModel && data.length > 0) {
+        // Set default model if none selected or current not in list
+        if (data.length > 0 && (!selectedModel || !data.includes(selectedModel))) {
           onModelChange(data[0]);
         }
       } catch (error) {
@@ -64,7 +69,7 @@ export const ProviderModelSelector: React.FC<ProviderModelSelectorProps> = ({
       }
     };
     loadModels();
-  }, [selectedProvider, selectedModel, onModelChange]);
+  }, [selectedProvider, selectedModel, onModelChange, isAuthenticated]);
 
   const handleProviderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newProvider = e.target.value;

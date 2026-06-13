@@ -25,7 +25,7 @@ export function QuotaMeter({ collapsed = false }: QuotaMeterProps) {
   }, []);
 
   const pct = Math.min(100, Math.round((used / DAILY_LIMIT) * 100));
-  const remaining = Math.max(0, DAILY_LIMIT - used).toLocaleString();
+  const remaining = Math.max(0, DAILY_LIMIT - used).toLocaleString("en-US");
 
   if (collapsed) {
     return (

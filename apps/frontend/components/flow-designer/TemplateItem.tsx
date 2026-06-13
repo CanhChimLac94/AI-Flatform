@@ -1,9 +1,11 @@
 "use client";
 
+import { FlowIcon, type FlowIconKey } from "./flowIcons";
+
 interface TemplateItemProps {
   label: string;
   description: string;
-  icon: string;
+  icon: FlowIconKey;
   onClick: () => void;
 }
 
@@ -15,7 +17,7 @@ export function TemplateItem({ label, description, icon, onClick }: TemplateItem
     >
       <div className="flex items-center gap-2">
         <div className="w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center border border-blue-500/20 group-hover:bg-blue-500/40 transition-colors">
-          <span className="material-symbols-outlined text-[16px] text-blue-300">{icon}</span>
+          <FlowIcon icon={icon} className="w-4 h-4 text-blue-300" />
         </div>
         <span className="text-[11px] font-bold text-white/90">{label}</span>
       </div>

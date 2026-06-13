@@ -34,7 +34,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white">Create account</h1>
-          <p className="text-gray-400 text-sm mt-1">Join Omni AI Chat — free to start</p>
+          <p className="text-gray-400 text-sm mt-1">Join AI Hub — free to start</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

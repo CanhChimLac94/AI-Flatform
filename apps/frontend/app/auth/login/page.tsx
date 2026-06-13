@@ -32,7 +32,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white">Welcome back</h1>
-          <p className="text-gray-400 text-sm mt-1">Sign in to Omni AI Chat</p>
+          <p className="text-gray-400 text-sm mt-1">Sign in to AI Hub</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

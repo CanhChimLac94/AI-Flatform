@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.schemas.system_agent import _validate_icon
+from app.schemas.system_agent import AgentCategoryOut, _validate_icon
 
 
 class AgentCreate(BaseModel):
@@ -15,6 +15,7 @@ class AgentCreate(BaseModel):
     tools: list[str] = []
     is_public: bool = False
     icon: str | None = None
+    category_ids: list[UUID] = Field(default_factory=list)
 
     @field_validator("icon")
     @classmethod
@@ -31,6 +32,7 @@ class AgentUpdate(BaseModel):
     tools: list[str] | None = None
     is_public: bool | None = None
     icon: str | None = None
+    category_ids: list[UUID] | None = None
 
     @field_validator("icon")
     @classmethod
@@ -49,6 +51,7 @@ class AgentOut(BaseModel):
     tools: list
     is_public: bool
     icon: str | None
+    categories: list[AgentCategoryOut] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 

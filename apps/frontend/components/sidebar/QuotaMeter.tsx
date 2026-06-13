@@ -1,14 +1,15 @@
 "use client";
 
-// Reads daily quota from localStorage key set by the done SSE event.
-// Shows a simple progress bar (Schema Group D / Business Rule #1).
-
 import { useEffect, useState } from "react";
 
 const DAILY_LIMIT = 50_000;
 const STORAGE_KEY = "omni_daily_tokens";
 
-export function QuotaMeter() {
+interface QuotaMeterProps {
+  collapsed?: boolean;
+}
+
+export function QuotaMeter({ collapsed = false }: QuotaMeterProps) {
   const [used, setUsed] = useState(0);
 
   useEffect(() => {
@@ -25,6 +26,24 @@ export function QuotaMeter() {
 
   const pct = Math.min(100, Math.round((used / DAILY_LIMIT) * 100));
   const remaining = Math.max(0, DAILY_LIMIT - used).toLocaleString();
+
+  if (collapsed) {
+    return (
+      <div
+        className="flex flex-col items-center gap-1 px-1"
+        title={`Daily quota: ${remaining} tokens left (${pct}% used)`}
+      >
+        <div className="w-8 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${
+              pct > 80 ? "bg-red-500" : pct > 50 ? "bg-yellow-500" : "bg-accent"
+            }`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-1">

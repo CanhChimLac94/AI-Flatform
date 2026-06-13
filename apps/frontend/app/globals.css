@@ -3,7 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --sidebar-width: 260px;
+  --sidebar-width: 16rem;
+}
+
+@layer utilities {
+  .safe-area-bottom {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
 }
 
 * {
@@ -19,6 +25,13 @@ body {
   overflow-x: hidden;
   background-color: #1f2937;
   color: #f9fafb;
+}
+
+@supports (height: 100dvh) {
+  html,
+  body {
+    height: 100dvh;
+  }
 }
 
 /* Streaming cursor animation */
@@ -54,4 +67,60 @@ body {
 .prose-chat input[type="checkbox"] {
   margin-right: 0.4rem;
   accent-color: #818cf8;
+}
+
+/* Agent Flow Designer */
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.flow-dark-scrollbar::-webkit-scrollbar { width: 4px; }
+.flow-dark-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.flow-dark-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+
+@keyframes flow-loading {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+.flow-loading-bar {
+  animation: flow-loading 1.5s ease-in-out infinite;
+}
+
+.flow-designer .react-flow__handle {
+  border-radius: 4px !important;
+  width: 10px !important;
+  height: 10px !important;
+}
+
+.flow-designer .react-flow__edge-path {
+  stroke: rgba(255, 255, 255, 0.1) !important;
+  stroke-width: 3 !important;
+  transition: stroke 0.3s;
+}
+
+.flow-designer .react-flow__edge.selected .react-flow__edge-path {
+  stroke: #3b82f6 !important;
+}
+
+.flow-designer .react-flow__controls {
+  background: #1a1a1a !important;
+  border: 1px solid #333 !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+}
+
+.flow-designer .react-flow__controls-button {
+  border-bottom: 1px solid #333 !important;
+  fill: #666 !important;
+}
+
+.flow-designer .react-flow__controls-button:hover {
+  background: #333 !important;
+  fill: white !important;
+}
+
+.flow-designer .react-flow__background {
+  background: #0e0e0e !important;
 }

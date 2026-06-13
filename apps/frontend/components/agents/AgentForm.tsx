@@ -5,6 +5,7 @@ import { DocumentArrowUpIcon, TrashIcon, XMarkIcon } from "@heroicons/react/24/o
 import type { Agent, AgentCreateRequest, AgentKnowledgeFile, AgentUpdateRequest } from "@/lib/types";
 import { PROVIDERS } from "@/lib/types";
 import { deleteKnowledgeFile, listKnowledgeFiles, uploadKnowledgeFile } from "@/lib/api";
+import { IconPicker } from "./IconPicker";
 
 interface Props {
   initial?: Agent;
@@ -29,6 +30,7 @@ export function AgentForm({ initial, onSubmit, onCancel }: Props) {
   const [model, setModel] = useState(initial?.model ?? "");
   const [tools, setTools] = useState<string[]>(initial?.tools ?? []);
   const [isPublic, setIsPublic] = useState(initial?.is_public ?? false);
+  const [icon, setIcon] = useState<string | null>(initial?.icon ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,6 +67,7 @@ export function AgentForm({ initial, onSubmit, onCancel }: Props) {
         model: model.trim() || undefined,
         tools,
         is_public: isPublic,
+        icon,
       });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -130,6 +133,8 @@ export function AgentForm({ initial, onSubmit, onCancel }: Props) {
               className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
             />
           </div>
+
+          <IconPicker value={icon} onChange={setIcon} label="Icon hiển thị" />
 
           <div>
             <label className="block text-xs text-gray-400 mb-1.5">Description</label>

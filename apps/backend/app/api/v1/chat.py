@@ -205,9 +205,10 @@ async def chat_completions(
         try:
             fetched = await agent_repo.get(_UUID(req.agent_id))
             if fetched and (
-                current_user is None or
-                str(fetched.owner_user_id) == str(current_user.id) or
-                fetched.is_public
+                current_user is None
+                or str(fetched.owner_user_id) == str(current_user.id)
+                or fetched.is_public
+                or fetched.is_system
             ):
                 active_agent = fetched
         except (ValueError, Exception):

@@ -77,9 +77,9 @@ export const ProviderModelSelector: React.FC<ProviderModelSelectorProps> = ({
   };
 
   return (
-    <div className="flex items-center gap-3 rounded-lg ">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full min-w-0">
       {/* Provider Selector */}
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1 flex-1 min-w-0 sm:flex-none sm:min-w-[140px]">
         {/* <label htmlFor="provider-select" className="text-xs font-medium text-gray-400">
           {t('chat.provider', 'Provider')}
         </label> */}
@@ -88,7 +88,7 @@ export const ProviderModelSelector: React.FC<ProviderModelSelectorProps> = ({
           value={selectedProvider}
           onChange={handleProviderChange}
           disabled={disabled || loading || providers.length === 0}
-          className="px-2 py-1 text-sm bg-gray-700 text-white border border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto min-w-0 px-2 py-1 text-sm bg-gray-700 text-white border border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <option value="">
             {loading ? t('common.loading', 'Loading...') : t('chat.selectProvider', 'Select Provider')}
@@ -102,7 +102,7 @@ export const ProviderModelSelector: React.FC<ProviderModelSelectorProps> = ({
       </div>
 
       {/* Model Selector */}
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1 flex-1 min-w-0 sm:flex-none sm:min-w-[180px]">
         {/* <label htmlFor="model-select" className="text-xs font-medium text-gray-400">
           {t('chat.model', 'Model')}
         </label> */}
@@ -111,7 +111,7 @@ export const ProviderModelSelector: React.FC<ProviderModelSelectorProps> = ({
           value={selectedModel}
           onChange={(e) => onModelChange(e.target.value)}
           disabled={disabled || loading || models.length === 0 || !selectedProvider}
-          className="px-2 py-1 text-sm bg-gray-700 text-white border border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto min-w-0 px-2 py-1 text-sm bg-gray-700 text-white border border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <option value="">
             {loading ? t('common.loading', 'Loading...') : t('chat.selectModel', 'Select Model')}

@@ -1,7 +1,9 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.schemas.system_agent import _validate_icon
 
 
 class AgentCreate(BaseModel):
@@ -12,6 +14,12 @@ class AgentCreate(BaseModel):
     params: dict = {}
     tools: list[str] = []
     is_public: bool = False
+    icon: str | None = None
+
+    @field_validator("icon")
+    @classmethod
+    def _icon(cls, v: str | None) -> str | None:
+        return _validate_icon(v)
 
 
 class AgentUpdate(BaseModel):
@@ -22,6 +30,12 @@ class AgentUpdate(BaseModel):
     params: dict | None = None
     tools: list[str] | None = None
     is_public: bool | None = None
+    icon: str | None = None
+
+    @field_validator("icon")
+    @classmethod
+    def _icon(cls, v: str | None) -> str | None:
+        return _validate_icon(v)
 
 
 class AgentOut(BaseModel):
@@ -34,6 +48,7 @@ class AgentOut(BaseModel):
     params: dict
     tools: list
     is_public: bool
+    icon: str | None
     created_at: datetime
     updated_at: datetime
 

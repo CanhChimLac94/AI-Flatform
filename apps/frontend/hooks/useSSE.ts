@@ -24,7 +24,7 @@ export function useSSE() {
     abortRef.current?.abort();
     abortRef.current = new AbortController();
 
-    const { url, init } = buildChatStream(body);
+    const { url, init } = await buildChatStream(body);
     let partialContent = "";
 
     const savePartial = () => {

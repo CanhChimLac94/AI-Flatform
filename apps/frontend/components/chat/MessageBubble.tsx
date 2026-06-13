@@ -130,9 +130,17 @@ export function MessageBubble({ message, onRegenerate }: MessageBubbleProps) {
 
       {/* Citation side panel */}
       {openCitation && (
-        <div className="fixed inset-y-0 right-0 z-50 flex">
-          <CitationPanel citation={openCitation} onClose={() => setOpenCitation(null)} />
-        </div>
+        <>
+          <button
+            type="button"
+            aria-label="Close citation panel"
+            className="fixed inset-0 bg-black/50 z-40 sm:hidden"
+            onClick={() => setOpenCitation(null)}
+          />
+          <div className="fixed inset-y-0 right-0 z-50 flex w-full sm:w-auto max-w-full">
+            <CitationPanel citation={openCitation} onClose={() => setOpenCitation(null)} />
+          </div>
+        </>
       )}
     </>
   );

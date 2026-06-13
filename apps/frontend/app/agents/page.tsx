@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { PlusIcon, ArrowLeftIcon, CpuChipIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, CpuChipIcon, Squares2X2Icon, ServerStackIcon } from "@heroicons/react/24/outline";
 import type { Agent, AgentCreateRequest, AgentUpdateRequest } from "@/lib/types";
 import { AgentCard } from "@/components/agents/AgentCard";
 import { AgentForm } from "@/components/agents/AgentForm";
+import { AppShell } from "@/components/layout/AppShell";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   listAgents, createAgent, updateAgent, deleteAgent, duplicateAgent,
@@ -101,85 +103,96 @@ export default function AgentsPage() {
   }, [isAuthenticated]);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-gray-950/80 backdrop-blur-sm border-b border-gray-800">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+    <AppShell>
+      <PageHeader
+        icon={CpuChipIcon}
+        title="Agents"
+        badge={
+          !isAuthenticated ? (
+            <span className="text-xs bg-amber-900/30 text-amber-400 border border-amber-800/50 px-2 py-0.5 rounded-full">
+              Guest — saved locally
+            </span>
+          ) : undefined
+        }
+        actions={
+          <>
             <Link
-              href="/chat"
-              className="p-1.5 text-gray-500 hover:text-gray-300 hover:bg-gray-800 rounded-lg transition-colors"
+              href="/agents/system"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-emerald-700/50 hover:border-emerald-500 text-emerald-400 hover:text-emerald-300 text-xs font-medium rounded-lg transition-colors"
+              title="Thư viện hệ thống"
             >
-              <ArrowLeftIcon className="w-4 h-4" />
+              <ServerStackIcon className="w-4 h-4" />
+              <span className="hidden sm:inline">Thư viện hệ thống</span>
             </Link>
-            <div className="flex items-center gap-2">
-              <CpuChipIcon className="w-5 h-5 text-blue-400" />
-              <h1 className="text-base font-semibold">Agents</h1>
-            </div>
-            {!isAuthenticated && (
-              <span className="text-xs bg-amber-900/30 text-amber-400 border border-amber-800/50 px-2 py-0.5 rounded-full">
-                Guest — saved locally
-              </span>
-            )}
-          </div>
-          <button
-            onClick={() => setFormMode({ type: "create" })}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            <PlusIcon className="w-4 h-4" />
-            New agent
-          </button>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-4 py-6">
-        {error && (
-          <div className="mb-4 text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-4 py-2.5">
-            {error}
-          </div>
-        )}
-
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-40 bg-gray-800 rounded-xl animate-pulse" />
-            ))}
-          </div>
-        ) : agents.length === 0 ? (
-          <div className="text-center py-24 flex flex-col items-center gap-4">
-            <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center">
-              <CpuChipIcon className="w-8 h-8 text-gray-600" />
-            </div>
-            <div>
-              <p className="text-gray-300 font-medium">No agents yet</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Create a custom agent with its own system prompt, model, and tools.
-              </p>
-            </div>
+            <Link
+              href="/agents/flow"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-gray-600 hover:border-gray-400 text-gray-300 hover:text-white text-xs font-medium rounded-lg transition-colors"
+              title="Flow Designer"
+            >
+              <Squares2X2Icon className="w-4 h-4" />
+              <span className="hidden sm:inline">Flow Designer</span>
+            </Link>
             <button
               onClick={() => setFormMode({ type: "create" })}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-colors"
+              title="New agent"
             >
               <PlusIcon className="w-4 h-4" />
-              Create your first agent
+              <span className="hidden sm:inline">New agent</span>
             </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {agents.map((agent) => (
-              <AgentCard
-                key={agent.id}
-                agent={agent}
-                onEdit={(a) => setFormMode({ type: "edit", agent: a })}
-                onDelete={(a) => setDeleteConfirm(a)}
-                onDuplicate={handleDuplicate}
-              />
-            ))}
-          </div>
-        )}
+          </>
+        }
+      />
+
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+          {error && (
+            <div className="mb-4 text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-4 py-2.5">
+              {error}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-40 bg-gray-800 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : agents.length === 0 ? (
+            <div className="text-center py-24 flex flex-col items-center gap-4">
+              <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center">
+                <CpuChipIcon className="w-8 h-8 text-gray-600" />
+              </div>
+              <div>
+                <p className="text-gray-300 font-medium">No agents yet</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Create a custom agent with its own system prompt, model, and tools.
+                </p>
+              </div>
+              <button
+                onClick={() => setFormMode({ type: "create" })}
+                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                <PlusIcon className="w-4 h-4" />
+                Create your first agent
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {agents.map((agent) => (
+                <AgentCard
+                  key={agent.id}
+                  agent={agent}
+                  onEdit={(a) => setFormMode({ type: "edit", agent: a })}
+                  onDelete={(a) => setDeleteConfirm(a)}
+                  onDuplicate={handleDuplicate}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </main>
 
-      {/* Create / Edit modal */}
       {formMode && (
         <AgentForm
           initial={formMode.type === "edit" ? formMode.agent : undefined}
@@ -188,7 +201,6 @@ export default function AgentsPage() {
         />
       )}
 
-      {/* Delete confirmation */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
           <div className="w-full max-w-sm bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-6">
@@ -214,6 +226,6 @@ export default function AgentsPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

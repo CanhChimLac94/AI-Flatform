@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import {
-  ArrowLeftIcon,
   KeyIcon,
   CheckCircleIcon,
   XCircleIcon,
@@ -38,6 +37,8 @@ import {
   saveLocalPersona,
   EMPTY_PERSONA,
 } from "@/lib/personaSync";
+import { AppShell } from "@/components/layout/AppShell";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 const TONE_OPTIONS = ["helpful", "formal", "casual", "concise", "creative"];
 
@@ -95,7 +96,7 @@ function PersonaEditor({ isAuthenticated }: { isAuthenticated: boolean }) {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs text-gray-400 mb-1.5">Preferred language</label>
             <input
@@ -387,8 +388,8 @@ function ServerApiKeyCard({
   return (
     <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-5 space-y-3">
       {/* Header row */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
           <span className="font-medium text-white">{group.name}</span>
           {group.is_set ? (
             <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -407,7 +408,7 @@ function ServerApiKeyCard({
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           {/* Quick link to provider API key page */}
           {keyPageUrl && (
             <a
@@ -516,7 +517,7 @@ function AuthPreferenceSection() {
       <p className="text-xs text-gray-400">
         Used when no explicit provider is selected. Stored server-side and synced across devices.
       </p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs text-gray-400 mb-1.5">Provider</label>
           <select
@@ -597,8 +598,8 @@ function GuestApiKeyCard({
 
   return (
     <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
           <span className="font-medium text-white">{provider.name}</span>
           {savedKey ? (
             <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-green-500/15 text-green-400 border border-green-500/30">
@@ -612,7 +613,7 @@ function GuestApiKeyCard({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           {maskedSaved && (
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-gray-400">{maskedSaved}</span>
@@ -642,8 +643,8 @@ function GuestApiKeyCard({
           )}
         </div>
       </div>
-      <div className="flex gap-2">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1 min-w-0">
           <input
             type={showKey ? "text" : "password"}
             value={inputKey}
@@ -712,7 +713,7 @@ function PreferenceSection({
     <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-5 space-y-4">
       <h2 className="text-sm font-semibold text-white">Default provider &amp; model</h2>
       <p className="text-xs text-gray-400">Used automatically when starting a new chat.</p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs text-gray-400 mb-1.5">Provider</label>
           <select
@@ -768,21 +769,11 @@ export default function SettingsPage() {
   const guestSettings = loadGuestSettings();
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <div className="max-w-2xl mx-auto px-4 py-10 space-y-8">
-        <Link
-          href="/chat"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
-        >
-          <ArrowLeftIcon className="w-4 h-4" />
-          Back to chat
-        </Link>
+    <AppShell>
+      <PageHeader icon={KeyIcon} title="Settings" />
 
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <KeyIcon className="w-6 h-6 text-blue-400" />
-            <h1 className="text-2xl font-semibold">Settings</h1>
-          </div>
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-8">
           {!isAuthenticated && (
             <p className="text-sm text-gray-400">
               Settings are stored locally in your browser.{" "}
@@ -792,9 +783,8 @@ export default function SettingsPage() {
               to save them securely on the server and sync across devices.
             </p>
           )}
-        </div>
 
-        <PersonaEditor isAuthenticated={isAuthenticated} />
+          <PersonaEditor isAuthenticated={isAuthenticated} />
 
         {isAuthenticated ? (
           <AuthPreferenceSection />
@@ -843,7 +833,8 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
-      </div>
-    </div>
+        </div>
+      </main>
+    </AppShell>
   );
 }

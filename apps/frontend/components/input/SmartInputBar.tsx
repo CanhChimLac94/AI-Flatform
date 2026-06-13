@@ -74,7 +74,7 @@ export function SmartInputBar({ onSend, onStop, isStreaming, disabled }: SmartIn
   const isBusy = disabled || isStreaming || isSending;
 
   return (
-    <div className="border-t border-gray-700 bg-chat-bg px-4 py-3">
+    <div className="border-t border-gray-700 bg-chat-bg px-3 sm:px-4 py-3 safe-area-bottom">
       {/* Attachment previews */}
       {attachments.length > 0 && (
         <div className="mb-2">
@@ -86,7 +86,7 @@ export function SmartInputBar({ onSend, onStop, isStreaming, disabled }: SmartIn
         </div>
       )}
 
-      <div className="flex items-end gap-2 bg-input-bg rounded-2xl px-3 py-2 border border-gray-600 focus-within:border-accent transition-colors">
+      <div className="flex flex-wrap items-end gap-2 bg-input-bg rounded-2xl px-2 sm:px-3 py-2 border border-gray-600 focus-within:border-accent transition-colors">
         {/* Attachment icon */}
         <div className="self-end pb-0.5">
           <AttachmentButton
@@ -109,7 +109,7 @@ export function SmartInputBar({ onSend, onStop, isStreaming, disabled }: SmartIn
         />
 
         {/* Right controls */}
-        <div className="flex items-center gap-1 self-end pb-0.5 shrink-0">
+        <div className="flex items-center gap-0.5 sm:gap-1 self-end pb-0.5 shrink-0 flex-wrap justify-end">
           {/* Web search toggle */}
           <button
             type="button"
@@ -126,7 +126,7 @@ export function SmartInputBar({ onSend, onStop, isStreaming, disabled }: SmartIn
           <select
             value={modelPref}
             onChange={(e) => setModelPref(e.target.value as ModelPref)}
-            className="text-xs bg-transparent text-gray-500 border-none outline-none cursor-pointer hover:text-gray-300"
+            className="hidden min-[480px]:block text-xs bg-transparent text-gray-500 border-none outline-none cursor-pointer hover:text-gray-300 max-w-[72px]"
           >
             <option value="auto">Auto</option>
             <option value="speed">⚡ Speed</option>

@@ -1,0 +1,75 @@
+---
+description: Responsive UI/UX standards for frontend (mobile, tablet, desktop)
+globs: apps/frontend/**/*.{tsx,css}
+alwaysApply: false
+---
+
+# Responsive UI/UX
+
+Every new or changed UI must work on **mobile (<768px)**, **tablet (768–1023px)**, and **desktop (≥1024px)**.
+
+## Breakpoints (Tailwind defaults)
+
+| Prefix | Min width | Use for |
+|--------|-----------|---------|
+| default | 0 | Mobile-first base styles |
+| `sm` | 640px | 2-column grids, show button labels |
+| `md` | 768px | Persistent sidebar, inline toolbars |
+| `lg` | 1024px | Flow Designer side panel always visible |
+
+## Layout shell
+
+- Pages inside the app use `AppShell` (not auth pages).
+- Sidebar: **drawer + backdrop** below `md`; persistent rail at `md+`.
+- Use `useSidebar().openMobileSidebar()` for hamburger buttons (see `PageHeader`, chat header).
+- App height: `h-dvh` (not `h-screen`). Page scroll: `flex-1 overflow-y-auto`.
+
+## Page content pattern
+
+```tsx
+<main className="flex-1 overflow-y-auto">
+  <div className="max-w-*xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-6">
+    {/* content */}
+  </div>
+</main>
+```
+
+## Headers & toolbars
+
+- `PageHeader` for non-chat pages; chat has its own stacked header.
+- Row 1: menu (mobile) + title + primary actions.
+- Row 2 (mobile) or inline (`md+`): secondary controls (provider/model, filters).
+- Header actions: `flex flex-wrap gap-2`; icon-only below `sm` with `title` attribute:
+
+```tsx
+<button title="New agent" className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 ...">
+  <PlusIcon className="w-4 h-4" />
+  <span className="hidden sm:inline">New agent</span>
+</button>
+```
+
+## Grids & forms
+
+- Never bare `grid-cols-2` — use `grid-cols-1 sm:grid-cols-2`.
+- Card/action rows: `flex flex-col sm:flex-row sm:items-center gap-3`.
+- Flex rows with text: always `min-w-0` on flex children + `truncate` on titles.
+
+## Panels & modals
+
+- Side panels (citations, flow tools): full-width overlay on mobile, fixed width on `sm+`.
+- Backdrop click closes mobile overlays.
+- Modals: `fixed inset-0 ... px-4` + `max-w-sm` / `max-w-xl`.
+
+## Touch & safe areas
+
+- Tap targets ≥ 44px (`p-2.5` minimum on icon buttons).
+- Bottom bars (input): add `safe-area-bottom` utility.
+- Avoid horizontal overflow; code/markdown uses existing `.prose-chat` scroll rules.
+
+## Checklist before shipping UI
+
+- [ ] Tested at ~375px, ~768px, ≥1280px widths
+- [ ] No horizontal scroll on page shell
+- [ ] Mobile menu opens/closes; nav closes drawer
+- [ ] Forms and grids stack on mobile
+- [ ] Actions reachable without overflow/clipping

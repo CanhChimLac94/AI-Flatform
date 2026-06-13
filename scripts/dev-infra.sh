@@ -15,7 +15,7 @@ cmd="${1:-up}"
 
 case "${cmd}" in
   up)
-    docker compose -f "${COMPOSE_FILE}" up -d
+    docker compose -f "${COMPOSE_FILE}" up -d --wait
     echo "Dev infra is running:"
     echo "  - Postgres: localhost:5432"
     echo "  - Redis:    localhost:6379"

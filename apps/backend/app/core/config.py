@@ -11,7 +11,11 @@ class Settings(BaseSettings):
     # Auth
     JWT_SECRET_KEY: str = "insecure-dev-secret"
     JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRE_MINUTES: int = 1440
+    JWT_ACCESS_EXPIRE_MINUTES: int = 15
+    JWT_REFRESH_EXPIRE_DAYS: int = 7
+    REFRESH_COOKIE_NAME: str = "omni_refresh"
+    # Deprecated — use JWT_ACCESS_EXPIRE_MINUTES
+    JWT_EXPIRE_MINUTES: int | None = None
 
     # LLM Providers
     OPENAI_API_KEY: str = ""

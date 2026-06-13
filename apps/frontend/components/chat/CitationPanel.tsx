@@ -13,7 +13,7 @@ interface CitationPanelProps {
 
 export function CitationPanel({ citation, onClose }: CitationPanelProps) {
   return (
-    <aside className="w-80 shrink-0 h-full bg-gray-800 border-l border-gray-700 flex flex-col animate-slide-in">
+    <aside className="w-full sm:w-80 max-w-full shrink-0 h-full bg-gray-800 border-l border-gray-700 flex flex-col animate-slide-in-right">
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
         <span className="text-sm font-medium text-gray-200">Source [{citation.id}]</span>
         <button

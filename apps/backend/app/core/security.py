@@ -18,14 +18,17 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_access_token(subject: Any) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
-    payload = {"sub": str(subject), "exp": expire}
+    minutes = settings.JWT_EXPIRE_MINUTES or settings.JWT_ACCESS_EXPIRE_MINUTES
+    expire = datetime.now(timezone.utc) + timedelta(minutes=minutes)
+    payload = {"sub": str(subject), "exp": expire, "type": "access"}
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
 def decode_access_token(token: str) -> str:
     try:
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        if payload.get("type") not in (None, "access"):
+            raise ValueError("Invalid token type")
         return payload["sub"]
     except JWTError:
         raise ValueError("Invalid or expired token")

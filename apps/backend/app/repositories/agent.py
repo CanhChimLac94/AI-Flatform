@@ -12,10 +12,13 @@ class AgentRepository(BaseRepository[Agent]):
         super().__init__(Agent, session)
 
     async def list_for_user(self, owner_user_id: UUID) -> list[Agent]:
-        """Returns all agents owned by the user, newest first."""
+        """Returns personal agents owned by the user (excludes system agents)."""
         result = await self.session.execute(
             select(Agent)
-            .where(Agent.owner_user_id == owner_user_id)
+            .where(
+                Agent.owner_user_id == owner_user_id,
+                Agent.is_system.is_(False),
+            )
             .order_by(Agent.created_at.desc())
         )
         return list(result.scalars().all())

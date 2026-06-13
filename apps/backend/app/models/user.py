@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, String, Text, func
+from sqlalchemy import BigInteger, Boolean, DateTime, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -30,6 +30,9 @@ class User(Base):
     # Language preference (vi, en, etc.)
     language_preference: Mapped[str] = mapped_column(
         String(10), nullable=False, server_default="vi", default="vi"
+    )
+    is_admin: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false", default=False
     )
     # Telegram integration (FR-07, US05)
     telegram_id: Mapped[int | None] = mapped_column(BigInteger, unique=True)

@@ -138,7 +138,11 @@ async def assign_agent(
         if agent is None:
             raise HTTPException(status_code=404, detail="Agent not found")
         # Only allow own agents or public agents
-        if str(agent.owner_user_id) != str(current_user.id) and not agent.is_public:
+        if (
+            str(agent.owner_user_id) != str(current_user.id)
+            and not agent.is_public
+            and not agent.is_system
+        ):
             raise HTTPException(status_code=403, detail="Access denied")
 
     conv.agent_id = body.agent_id

@@ -22,13 +22,12 @@ class Agent(Base):
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    # Optional model override — e.g. "gpt-4o-mini".  NULL means use the orchestrator default.
     model: Mapped[str | None] = mapped_column(String(100))
-    # Extra LLM params: {"temperature": 0.7, "max_tokens": 2000}
     params: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    # Tool allow-list: ["web_search"]
     tools: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     is_public: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    icon: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -40,4 +39,8 @@ class Agent(Base):
     conversations: Mapped[list["Conversation"]] = relationship(back_populates="agent")
     knowledge_files: Mapped[list["AgentKnowledgeFile"]] = relationship(
         back_populates="agent", cascade="all, delete-orphan"
+    )
+    categories: Mapped[list["AgentCategory"]] = relationship(
+        secondary="agent_category_links",
+        back_populates="agents",
     )

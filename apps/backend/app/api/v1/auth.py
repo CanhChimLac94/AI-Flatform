@@ -1,13 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_current_user
+from app.core.auth_cookies import clear_refresh_cookie, set_refresh_cookie
+from app.core.config import settings
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_db
 from app.models.user import User
 from app.repositories.user import UserRepository
 from app.services.provider_registry import DEFAULT_PROVIDER, DEFAULT_MODEL
+from app.services.refresh_tokens import consume_refresh_token, issue_refresh_token, revoke_refresh_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -62,6 +65,7 @@ class UserOut(BaseModel):
     persona_config: dict = {}
     default_provider: str = DEFAULT_PROVIDER
     default_model: str = DEFAULT_MODEL
+    is_admin: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -84,6 +88,7 @@ def _build_user_out(user: User) -> UserOut:
         persona_config=user.persona_config or {},
         default_provider=user.default_provider or DEFAULT_PROVIDER,
         default_model=user.default_model or DEFAULT_MODEL,
+        is_admin=bool(user.is_admin),
     )
 
 
@@ -101,10 +106,16 @@ async def _ensure_defaults(user: User, repo: UserRepository, db: AsyncSession) -
         await db.commit()
 
 
+async def _issue_session(user: User, response: Response) -> TokenResponse:
+    refresh = await issue_refresh_token(user.id)
+    set_refresh_cookie(response, refresh)
+    return TokenResponse(access_token=create_access_token(user.id))
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(body: RegisterRequest, response: Response, db: AsyncSession = Depends(get_db)):
     repo = UserRepository(db)
     if await repo.email_exists(body.email):
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -118,11 +129,11 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         hashed_password=hash_password(body.password),
     )
     await db.commit()
-    return TokenResponse(access_token=create_access_token(user.id))
+    return await _issue_session(user, response)
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(body: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
     repo = UserRepository(db)
     user = await repo.get_by_identifier(body.identifier)
 
@@ -133,7 +144,40 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
 
     await _ensure_defaults(user, repo, db)
 
-    return TokenResponse(access_token=create_access_token(user.id))
+    return await _issue_session(user, response)
+
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh_session(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """Issue a new access token using the httpOnly refresh cookie."""
+    raw = request.cookies.get(settings.REFRESH_COOKIE_NAME)
+    if not raw:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No refresh token")
+
+    user_id = await consume_refresh_token(raw)
+    if user_id is None:
+        clear_refresh_cookie(response)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+    repo = UserRepository(db)
+    user = await repo.get(user_id)
+    if user is None:
+        clear_refresh_cookie(response)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    return await _issue_session(user, response)
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(request: Request, response: Response) -> None:
+    raw = request.cookies.get(settings.REFRESH_COOKIE_NAME)
+    if raw:
+        await revoke_refresh_token(raw)
+    clear_refresh_cookie(response)
 
 
 @router.get("/me", response_model=UserOut)

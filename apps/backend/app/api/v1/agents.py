@@ -70,6 +70,7 @@ async def create_agent(
         model=body.model,
         params=body.params,
         tools=body.tools,
+        icon=body.icon,
         is_public=body.is_public,
     )
     await db.commit()
@@ -86,7 +87,8 @@ async def get_agent(
     agent = await repo.get(agent_id)
     if agent is None:
         raise HTTPException(status_code=404, detail="Agent not found")
-    # Allow access to own agents or public agents
+    if agent.is_system:
+        return agent
     if str(agent.owner_user_id) != str(current_user.id) and not agent.is_public:
         raise HTTPException(status_code=403, detail="Access denied")
     return agent
@@ -116,6 +118,8 @@ async def update_agent(
         agent.params = body.params
     if body.tools is not None:
         agent.tools = body.tools
+    if "icon" in body.model_fields_set:
+        agent.icon = body.icon
     if body.is_public is not None:
         agent.is_public = body.is_public
 
@@ -149,7 +153,7 @@ async def duplicate_agent(
     source = await repo.get(agent_id)
     if source is None:
         raise HTTPException(status_code=404, detail="Agent not found")
-    if str(source.owner_user_id) != str(current_user.id) and not source.is_public:
+    if not source.is_system and str(source.owner_user_id) != str(current_user.id) and not source.is_public:
         raise HTTPException(status_code=403, detail="Access denied")
 
     copy = await repo.create(
@@ -160,6 +164,7 @@ async def duplicate_agent(
         model=source.model,
         params=source.params,
         tools=source.tools,
+        icon=source.icon,
         is_public=False,
     )
     await db.commit()
@@ -178,7 +183,7 @@ async def list_knowledge_files(
     agent = await repo.get(agent_id)
     if agent is None:
         raise HTTPException(status_code=404, detail="Agent not found")
-    if str(agent.owner_user_id) != str(current_user.id) and not agent.is_public:
+    if not agent.is_system and str(agent.owner_user_id) != str(current_user.id) and not agent.is_public:
         raise HTTPException(status_code=403, detail="Access denied")
 
     result = await db.execute(
@@ -198,7 +203,7 @@ async def upload_knowledge_file(
 ):
     repo = AgentRepository(db)
     agent = await repo.get_owned(agent_id, current_user.id)
-    if agent is None:
+    if agent is None or agent.is_system:
         raise HTTPException(status_code=404, detail="Agent not found or access denied")
 
     import uuid as _uuid

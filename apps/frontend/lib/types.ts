@@ -12,6 +12,7 @@ export interface User {
   persona_config?: PersonaConfig;
   default_provider: string;
   default_model: string;
+  is_admin?: boolean;
 }
 
 export interface UserSettings {
@@ -44,6 +45,7 @@ export interface Agent {
   params: Record<string, unknown>;  // {"temperature": 0.7, "max_tokens": 2000}
   tools: string[];                  // ["web_search"]
   is_public: boolean;
+  icon?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -56,6 +58,7 @@ export interface AgentCreateRequest {
   params?: Record<string, unknown>;
   tools?: string[];
   is_public?: boolean;
+  icon?: string | null;
 }
 
 export interface AgentUpdateRequest {
@@ -66,6 +69,7 @@ export interface AgentUpdateRequest {
   params?: Record<string, unknown>;
   tools?: string[];
   is_public?: boolean;
+  icon?: string | null;
 }
 
 export interface AgentKnowledgeFile {
@@ -76,6 +80,74 @@ export interface AgentKnowledgeFile {
   content_type: string;
   size: number;
   created_at: string;
+}
+
+// ── System agents (shared catalog) ───────────────────────────────────────────
+
+export interface AgentCategory {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string | null;
+  sort_order: number;
+}
+
+export interface AgentCategoryCreateRequest {
+  name: string;
+  slug?: string;
+  description?: string;
+  color?: string;
+  icon?: string | null;
+  sort_order?: number;
+}
+
+export interface AgentCategoryUpdateRequest {
+  name?: string;
+  slug?: string;
+  description?: string;
+  color?: string;
+  icon?: string | null;
+  sort_order?: number;
+}
+
+export interface SystemAgent {
+  id: string;
+  owner_user_id: string;
+  name: string;
+  description?: string;
+  system_prompt: string;
+  model?: string;
+  params: Record<string, unknown>;
+  tools: string[];
+  icon?: string | null;
+  is_system: boolean;
+  categories: AgentCategory[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SystemAgentCreateRequest {
+  name: string;
+  description?: string;
+  system_prompt: string;
+  model?: string;
+  params?: Record<string, unknown>;
+  tools?: string[];
+  icon?: string | null;
+  category_ids: string[];
+}
+
+export interface SystemAgentUpdateRequest {
+  name?: string;
+  description?: string;
+  system_prompt?: string;
+  model?: string;
+  params?: Record<string, unknown>;
+  tools?: string[];
+  icon?: string | null;
+  category_ids?: string[];
 }
 
 export interface Conversation {

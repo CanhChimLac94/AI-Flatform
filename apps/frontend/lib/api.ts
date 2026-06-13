@@ -1,38 +1,76 @@
 import type {
   Conversation, ChatRequest, User, PersonaConfig,
   Agent, AgentCreateRequest, AgentUpdateRequest,
-  AgentKnowledgeFile,
+  AgentKnowledgeFile, AgentCategory, AgentCategoryCreateRequest, AgentCategoryUpdateRequest, SystemAgent,
+  SystemAgentCreateRequest, SystemAgentUpdateRequest,
   UserSettings, ProviderCatalogItem, TestKeyResult,
   StoredKeyInfo, ProviderKeyGroup, AttachmentRef,
 } from "./types";
+import {
+  clearAuthStorage,
+  getAccessToken,
+  getValidAccessToken,
+  notifySessionExpired,
+  refreshAccessToken,
+  setAccessToken,
+} from "./authSession";
 
 // Always use the relative /api prefix — works in both browser and server contexts.
 // Next.js rewrites /api/* → backend internally (see next.config.ts).
 const API_BASE = "/api";
 
+/** @deprecated Access token is kept in memory — use getAccessToken from authSession */
 export function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("omni_token");
+  return getAccessToken();
 }
 
 export function setToken(token: string): void {
-  localStorage.setItem("omni_token", token);
+  setAccessToken(token);
 }
 
 export function clearToken(): void {
-  localStorage.removeItem("omni_token");
+  clearAuthStorage();
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers ?? {}),
-    },
-  });
+type RequestOptions = RequestInit & { skipAuth?: boolean };
+
+async function fetchWithAuth(url: string, options: RequestOptions = {}): Promise<Response> {
+  const { skipAuth, ...fetchOptions } = options;
+
+  const buildHeaders = (token: string | null): HeadersInit => {
+    const base = new Headers(fetchOptions.headers);
+    if (!base.has("Content-Type") && !(fetchOptions.body instanceof FormData)) {
+      base.set("Content-Type", "application/json");
+    }
+    if (token) base.set("Authorization", `Bearer ${token}`);
+    return base;
+  };
+
+  const attempt = (token: string | null) =>
+    fetch(url, {
+      ...fetchOptions,
+      credentials: "include",
+      headers: buildHeaders(skipAuth ? null : token),
+    });
+
+  let token = skipAuth ? null : await getValidAccessToken();
+  let res = await attempt(token);
+
+  if (!skipAuth && res.status === 401) {
+    setAccessToken(null);
+    const refreshed = await refreshAccessToken(false);
+    if (refreshed) res = await attempt(refreshed);
+  }
+
+  if (!skipAuth && res.status === 401) {
+    notifySessionExpired();
+  }
+
+  return res;
+}
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const res = await fetchWithAuth(`${API_BASE}${path}`, options);
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -55,9 +93,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export async function login(identifier: string, password: string): Promise<string> {
   const data = await request<{ access_token: string }>("/auth/login", {
     method: "POST",
+    skipAuth: true,
     body: JSON.stringify({ identifier, password }),
   });
-  setToken(data.access_token);
+  setAccessToken(data.access_token);
   return data.access_token;
 }
 
@@ -69,10 +108,20 @@ export async function register(
 ): Promise<string> {
   const data = await request<{ access_token: string }>("/auth/register", {
     method: "POST",
+    skipAuth: true,
     body: JSON.stringify({ email, full_name, password, ...(username ? { username } : {}) }),
   });
-  setToken(data.access_token);
+  setAccessToken(data.access_token);
   return data.access_token;
+}
+
+export async function logout(): Promise<void> {
+  try {
+    await fetchWithAuth(`${API_BASE}/auth/logout`, { method: "POST", skipAuth: true });
+  } catch {
+    // Always clear local session even if the server call fails
+  }
+  clearAuthStorage();
 }
 
 export async function getMe(): Promise<User> {
@@ -118,10 +167,8 @@ export interface ConversationMessage {
 export async function uploadFile(file: File): Promise<AttachmentRef> {
   const formData = new FormData();
   formData.append("file", file);
-  const token = getToken();
-  const res = await fetch(`${API_BASE}/files/upload`, {
+  const res = await fetchWithAuth(`${API_BASE}/files/upload`, {
     method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
   });
   if (!res.ok) {
@@ -225,6 +272,64 @@ export async function duplicateAgent(id: string): Promise<Agent> {
   return request<Agent>(`/agents/${id}/duplicate`, { method: "POST" });
 }
 
+// ── System agents (shared catalog) ────────────────────────────────────────────
+
+export async function listAgentCategories(): Promise<AgentCategory[]> {
+  return request<AgentCategory[]>("/system-agents/categories", { skipAuth: true });
+}
+
+export async function createAgentCategory(body: AgentCategoryCreateRequest): Promise<AgentCategory> {
+  return request<AgentCategory>("/system-agents/categories", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateAgentCategory(
+  id: string,
+  body: AgentCategoryUpdateRequest,
+): Promise<AgentCategory> {
+  return request<AgentCategory>(`/system-agents/categories/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteAgentCategory(id: string): Promise<void> {
+  await request(`/system-agents/categories/${id}`, { method: "DELETE" });
+}
+
+export async function listSystemAgents(categoryId?: string): Promise<SystemAgent[]> {
+  const qs = categoryId ? `?category_id=${encodeURIComponent(categoryId)}` : "";
+  return request<SystemAgent[]>(`/system-agents${qs}`, { skipAuth: true });
+}
+
+export async function getSystemAgent(id: string): Promise<SystemAgent> {
+  return request<SystemAgent>(`/system-agents/${id}`, { skipAuth: true });
+}
+
+export async function createSystemAgent(body: SystemAgentCreateRequest): Promise<SystemAgent> {
+  return request<SystemAgent>("/system-agents", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateSystemAgent(id: string, body: SystemAgentUpdateRequest): Promise<SystemAgent> {
+  return request<SystemAgent>(`/system-agents/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteSystemAgent(id: string): Promise<void> {
+  await request(`/system-agents/${id}`, { method: "DELETE" });
+}
+
+export async function duplicateSystemAgent(id: string): Promise<{ id: string; name: string }> {
+  return request<{ id: string; name: string }>(`/system-agents/${id}/duplicate`, { method: "POST" });
+}
+
 export async function listKnowledgeFiles(agentId: string): Promise<AgentKnowledgeFile[]> {
   return request<AgentKnowledgeFile[]>(`/agents/${agentId}/knowledge`);
 }
@@ -232,10 +337,8 @@ export async function listKnowledgeFiles(agentId: string): Promise<AgentKnowledg
 export async function uploadKnowledgeFile(agentId: string, file: File): Promise<AgentKnowledgeFile> {
   const formData = new FormData();
   formData.append("file", file);
-  const token = getToken();
-  const res = await fetch(`${API_BASE}/agents/${agentId}/knowledge`, {
+  const res = await fetchWithAuth(`${API_BASE}/agents/${agentId}/knowledge`, {
     method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
   });
   if (!res.ok) {
@@ -284,12 +387,13 @@ export async function testProviderKey(
 
 // ── SSE Stream ────────────────────────────────────────────────────────────────
 
-export function buildChatStream(body: ChatRequest): { url: string; init: RequestInit } {
-  const token = getToken();
+export async function buildChatStream(body: ChatRequest): Promise<{ url: string; init: RequestInit }> {
+  const token = await getValidAccessToken();
   return {
     url: `${API_BASE}/chat/completions`,
     init: {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         "X-Request-Id": crypto.randomUUID(),

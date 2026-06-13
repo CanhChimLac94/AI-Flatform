@@ -44,28 +44,67 @@ if [[ -f "${ROOT_DIR}/.env" && ! -f "${BACKEND_DIR}/.env" ]]; then
   set +a
 fi
 
-# Start dev infrastructure (Docker: postgres, redis, adminer) via WSL
+# Start dev infrastructure (Docker: postgres, redis, adminer)
+wait_for_port() {
+  local port="$1"
+  local name="$2"
+  local retries="${3:-90}"
+  echo "Waiting for ${name} on 127.0.0.1:${port}..."
+  for ((i = 1; i <= retries; i++)); do
+    if python - <<PY >/dev/null 2>&1
+import socket
+s = socket.socket()
+s.settimeout(1)
+s.connect(("127.0.0.1", ${port}))
+s.close()
+PY
+    then
+      echo "${name} is reachable."
+      return 0
+    fi
+    sleep 1
+  done
+  echo "ERROR: ${name} not reachable on port ${port} after ${retries}s."
+  return 1
+}
+
 run_infra() {
   local cmd="${1:-up}"
   if [[ ! -f "${INFRA_SCRIPT}" ]]; then
-    echo "WARNING: dev-infra.sh not found, skipping."
-    return
+    echo "ERROR: dev-infra.sh not found."
+    return 1
   fi
-  if grep -qiE "microsoft|wsl" /proc/version 2>/dev/null; then
-    # Already inside WSL — run directly
+  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
     bash "${INFRA_SCRIPT}" "${cmd}"
-  elif command -v wsl &>/dev/null; then
-    # Running on Windows (Git Bash) — convert path and delegate to WSL
+  elif grep -qiE "microsoft|wsl" /proc/version 2>/dev/null; then
+    bash "${INFRA_SCRIPT}" "${cmd}"
+  elif command -v wsl >/dev/null 2>&1; then
     local wsl_path
     wsl_path=$(printf '%s' "${INFRA_SCRIPT}" | sed 's|^\([A-Za-z]\):|/mnt/\L\1|;s|\\|/|g')
     wsl bash "${wsl_path}" "${cmd}"
   else
-    echo "WARNING: WSL not available; skipping dev-infra ${cmd}."
+    echo "ERROR: Docker not available. Install Docker Desktop or run inside WSL."
+    return 1
   fi
 }
 
 echo "Starting dev infrastructure..."
-run_infra up
+run_infra up || exit 1
+wait_for_port 5432 "Postgres" || exit 1
+wait_for_port 6379 "Redis" || exit 1
+
+echo "Running database migrations..."
+(
+  cd "${BACKEND_DIR}"
+  if [[ -f ".venv/scripts/activate" ]]; then
+    # shellcheck disable=SC1091
+    source .venv/scripts/activate
+  elif [[ -f ".venv/bin/activate" ]]; then
+    # shellcheck disable=SC1091
+    source .venv/bin/activate
+  fi
+  alembic upgrade head
+) || exit 1
 echo ""
 
 (

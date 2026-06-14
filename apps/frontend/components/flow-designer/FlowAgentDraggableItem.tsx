@@ -5,10 +5,11 @@ import type { NodeType } from "./types";
 import {
   buildAgentDropData,
   resolveFlowAgentIconColor,
-  sourceBadgeLabel,
+  sourceBadgeLabelKey,
   type FlowPaletteAgent,
 } from "./flowAgentPalette";
 import { FlowIcon } from "./flowIcons";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface FlowAgentDraggableItemProps {
   agent: FlowPaletteAgent;
@@ -16,9 +17,10 @@ interface FlowAgentDraggableItemProps {
 }
 
 export function FlowAgentDraggableItem({ agent, showSourceBadge = true }: FlowAgentDraggableItemProps) {
+  const { t } = useI18n();
   const type: NodeType = "agent";
   const iconColor = resolveFlowAgentIconColor(agent);
-  const badge = showSourceBadge ? sourceBadgeLabel(agent.source) : null;
+  const badgeKey = showSourceBadge ? sourceBadgeLabelKey(agent.source) : null;
 
   const onDragStart = (event: React.DragEvent) => {
     event.dataTransfer.setData("application/reactflow", type);
@@ -41,13 +43,15 @@ export function FlowAgentDraggableItem({ agent, showSourceBadge = true }: FlowAg
       <div className="flex flex-col overflow-hidden min-w-0 flex-1">
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="text-[11px] font-medium text-foreground truncate">{agent.name}</span>
-          {badge && (
+          {badgeKey && (
             <span className="text-[7px] uppercase tracking-wider px-1 py-0.5 rounded bg-surface-muted text-muted border border-border shrink-0">
-              {badge}
+              {t(badgeKey)}
             </span>
           )}
         </div>
-        <span className="text-[8px] text-muted uppercase tracking-tighter">Kéo thả</span>
+        <span className="text-[8px] text-muted uppercase tracking-tighter">
+          {t("flows.dragHint", "Drag to canvas")}
+        </span>
       </div>
       <FlowIcon icon="drag" className="w-[14px] h-[14px] text-muted/40 ml-auto shrink-0" />
     </div>

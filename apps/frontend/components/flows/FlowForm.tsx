@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import type { FlowCreateRequest, FlowUpdateRequest } from "@/lib/types";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface Props {
   mode: "create" | "edit";
@@ -19,6 +20,7 @@ export function FlowForm({
   onSubmit,
   onClose,
 }: Props) {
+  const { t } = useI18n();
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
   const [saving, setSaving] = useState(false);
@@ -32,7 +34,7 @@ export function FlowForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setError("Vui lòng nhập tên flow.");
+      setError(t("flows.form.nameRequired", "Please enter a flow name."));
       return;
     }
     setSaving(true);
@@ -44,7 +46,7 @@ export function FlowForm({
       });
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Lưu thất bại");
+      setError(err instanceof Error ? err.message : t("errors.saveFailed", "Save failed"));
     } finally {
       setSaving(false);
     }
@@ -55,12 +57,15 @@ export function FlowForm({
       <div className="w-full max-w-md bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
           <h2 className="text-sm font-semibold text-white">
-            {mode === "create" ? "Tạo flow mới" : "Sửa thông tin flow"}
+            {mode === "create"
+              ? t("flows.form.createTitle", "New flow")
+              : t("flows.form.editTitle", "Edit flow info")}
           </h2>
           <button
             type="button"
             onClick={onClose}
             className="p-1.5 text-gray-500 hover:text-white rounded-lg hover:bg-gray-800"
+            aria-label={t("common.close", "Close")}
           >
             <XMarkIcon className="w-5 h-5" />
           </button>
@@ -74,24 +79,28 @@ export function FlowForm({
           )}
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-gray-400">Tên flow *</span>
+            <span className="text-xs font-medium text-gray-400">
+              {t("flows.form.nameLabel", "Flow name *")}
+            </span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-indigo-500"
-              placeholder="VD: Quy trình phát triển phần mềm"
+              placeholder={t("flows.form.namePlaceholder", "e.g. Software development workflow")}
               autoFocus
             />
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-gray-400">Mô tả</span>
+            <span className="text-xs font-medium text-gray-400">
+              {t("flows.form.descriptionLabel", "Description")}
+            </span>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 resize-none"
-              placeholder="Mô tả ngắn về mục đích của flow..."
+              placeholder={t("flows.form.descriptionPlaceholder", "Brief description of this flow…")}
             />
           </label>
 
@@ -101,14 +110,18 @@ export function FlowForm({
               onClick={onClose}
               className="px-4 py-2 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-gray-800"
             >
-              Hủy
+              {t("common.cancel", "Cancel")}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="px-4 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg"
             >
-              {saving ? "Đang lưu..." : mode === "create" ? "Tạo flow" : "Lưu"}
+              {saving
+                ? t("flows.form.saving", "Saving…")
+                : mode === "create"
+                  ? t("flows.form.createButton", "Create flow")
+                  : t("common.save", "Save")}
             </button>
           </div>
         </form>

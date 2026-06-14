@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckIcon, ChevronDownIcon, Squares2X2Icon } from "@heroicons/react/24/outline";
 import type { AgentCategory } from "@/lib/types";
+import { useI18n } from "@/contexts/I18nContext";
 import { AgentIcon } from "./AgentIcon";
 import { categoryBadgeClass } from "./CategoryBadge";
 
@@ -15,9 +16,11 @@ interface Props {
 
 function CategoryPill({
   category,
+  allGroupsLabel,
   className = "",
 }: {
   category: Pick<AgentCategory, "name" | "icon" | "color"> | null;
+  allGroupsLabel: string;
   className?: string;
 }) {
   if (!category) {
@@ -26,7 +29,7 @@ function CategoryPill({
         className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border bg-gray-800 text-gray-300 border-gray-600 ${className}`}
       >
         <Squares2X2Icon className="w-3.5 h-3.5 shrink-0" />
-        Tất cả nhóm
+        {allGroupsLabel}
       </span>
     );
   }
@@ -42,9 +45,11 @@ function CategoryPill({
 }
 
 export function CategoryFilter({ categories, selectedId, onSelect, className = "" }: Props) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const selected = categories.find((c) => c.id === selectedId) ?? null;
+  const allGroupsLabel = t("agents.categories.allGroups", "All categories");
 
   useEffect(() => {
     if (!open) return;
@@ -76,10 +81,14 @@ export function CategoryFilter({ categories, selectedId, onSelect, className = "
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label="Chọn nhóm phân loại agents"
+        aria-label={t("agents.categories.filterAria", "Select agent category")}
         className="group inline-flex items-center gap-1.5 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
       >
-        <CategoryPill category={selected} className="group-hover:opacity-90 transition-opacity max-w-[200px] sm:max-w-[240px]" />
+        <CategoryPill
+          category={selected}
+          allGroupsLabel={allGroupsLabel}
+          className="group-hover:opacity-90 transition-opacity max-w-[200px] sm:max-w-[240px]"
+        />
         <ChevronDownIcon
           className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
           aria-hidden
@@ -89,11 +98,11 @@ export function CategoryFilter({ categories, selectedId, onSelect, className = "
       {open && (
         <div
           role="listbox"
-          aria-label="Nhóm phân loại"
+          aria-label={t("agents.categories.listAria", "Categories")}
           className="absolute z-50 top-[calc(100%+6px)] left-1/2 -translate-x-1/2 w-[min(280px,calc(100vw-2rem))] py-2 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl shadow-black/50"
         >
           <p className="px-3 pb-1.5 text-[10px] font-medium uppercase tracking-wider text-gray-500">
-            Nhóm phân loại
+            {t("agents.categories.sectionTitle", "Categories")}
           </p>
 
           <button
@@ -105,7 +114,7 @@ export function CategoryFilter({ categories, selectedId, onSelect, className = "
               selectedId === null ? "bg-gray-800/60" : ""
             }`}
           >
-            <CategoryPill category={null} />
+            <CategoryPill category={null} allGroupsLabel={allGroupsLabel} />
             {selectedId === null && <CheckIcon className="w-4 h-4 text-accent shrink-0" />}
           </button>
 
@@ -125,7 +134,7 @@ export function CategoryFilter({ categories, selectedId, onSelect, className = "
                     isSelected ? "bg-gray-800/60" : ""
                   }`}
                 >
-                  <CategoryPill category={cat} />
+                  <CategoryPill category={cat} allGroupsLabel={allGroupsLabel} />
                   {isSelected && <CheckIcon className="w-4 h-4 text-accent shrink-0" />}
                 </button>
               );

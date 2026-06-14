@@ -1,7 +1,8 @@
 """
 User API key resolver.
 
-Priority: user's active key (from user_api_keys table) > system .env key.
+Returns only keys stored by the user (user_api_keys table).
+Environment / system keys are intentionally NOT used for chat or settings.
 Results are cached in Redis for 60 s to avoid a DB round-trip on every request.
 """
 
@@ -9,7 +10,6 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.db.redis import get_redis
 from app.repositories.user_api_key import UserApiKeyRepository
 from app.services.encryption import decrypt_key
@@ -17,24 +17,17 @@ from app.services.encryption import decrypt_key
 _CACHE_TTL = 60  # seconds
 _CACHE_PREFIX = "ukey:{user_id}:{provider}"
 
-# System-level fallbacks from .env
-_SYSTEM_KEYS: dict[str, str] = {
-    "openai":      settings.OPENAI_API_KEY,
-    "anthropic":   settings.ANTHROPIC_API_KEY,
-    "groq":        settings.GROQ_API_KEY,
-    "google":      getattr(settings, "GOOGLE_API_KEY", ""),
-    "openrouter":  getattr(settings, "OPENROUTER_API_KEY", ""),
-    "nvidia":      getattr(settings, "NVIDIA_API_KEY", ""),
-}
-
 _ALL_PROVIDERS = ("openai", "anthropic", "groq", "google", "openrouter", "nvidia")
 
 
+def is_usable_api_key(key: str | None) -> bool:
+    """True when a non-placeholder user key is present (matches chat catalog filter)."""
+    k = (key or "").strip()
+    return bool(k) and not k.startswith("sk-...") and len(k) > 8
+
+
 async def get_effective_key(provider: str, user_id: UUID, db: AsyncSession) -> str:
-    """
-    Returns the decrypted active API key for a provider.
-    User's own active key takes precedence; falls back to system .env key.
-    """
+    """Returns the decrypted active user API key for a provider, or empty string."""
     redis = get_redis()
     cache_key = _CACHE_PREFIX.format(user_id=user_id, provider=provider)
 
@@ -53,12 +46,12 @@ async def get_effective_key(provider: str, user_id: UUID, db: AsyncSession) -> s
         except ValueError:
             pass
 
-    return _SYSTEM_KEYS.get(provider, "")
+    return ""
 
 
 async def get_all_effective_keys(user_id: UUID, db: AsyncSession) -> dict[str, str]:
     """
-    Fetch effective API keys for all providers in a single DB query.
+    Fetch user-stored API keys for all providers in a single DB query.
 
     Uses list_for_user() and picks the active key per provider, avoiding
     N concurrent repo.get_active() calls on the same AsyncSession.
@@ -105,11 +98,11 @@ async def get_all_effective_keys(user_id: UUID, db: AsyncSession) -> dict[str, s
                 except ValueError:
                     pass
 
-    # ── Phase 3: Merge with system keys and populate cache ────────────────────
+    # ── Phase 3: Populate result and cache (user keys only) ───────────────────
     for provider in uncached:
-        key = active_by_provider.get(provider) or _SYSTEM_KEYS.get(provider, "")
+        key = active_by_provider.get(provider, "")
         result[provider] = key
-        if provider in active_by_provider:
+        if key:
             await redis.set(
                 _CACHE_PREFIX.format(user_id=user_id, provider=provider),
                 key,

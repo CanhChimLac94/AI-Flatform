@@ -39,6 +39,7 @@ export function loadGuestSettings(): GuestSettings {
 export function saveGuestSettings(s: GuestSettings): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+  window.dispatchEvent(new Event("aichat:guest_settings_updated"));
 }
 
 export function updateGuestApiKey(provider: string, key: string): void {

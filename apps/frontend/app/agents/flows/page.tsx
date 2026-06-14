@@ -54,11 +54,11 @@ export default function FlowsManagePage() {
         setFlows(loadGuestFlowSummaries());
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Không tải được danh sách flow");
+      setError(e instanceof Error ? e.message : t("flows.errors.loadListFailed", "Failed to load flows"));
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, t]);
 
   useEffect(() => {
     if (!isAuthReady) return;
@@ -120,9 +120,9 @@ export default function FlowsManagePage() {
         }
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Nhân bản thất bại");
+      setError(e instanceof Error ? e.message : t("flows.errors.duplicateFailed", "Duplicate failed"));
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, t]);
 
   const handleDelete = useCallback(async (flow: AgentFlowSummary) => {
     try {
@@ -133,11 +133,11 @@ export default function FlowsManagePage() {
       }
       setFlows((prev) => prev.filter((f) => f.id !== flow.id));
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Xóa thất bại");
+      setError(e instanceof Error ? e.message : t("flows.errors.deleteFailed", "Delete failed"));
     } finally {
       setDeleteConfirm(null);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, t]);
 
   const handleRun = useCallback(async (flow: AgentFlowSummary) => {
     if (!isAuthenticated) return;
@@ -148,11 +148,11 @@ export default function FlowsManagePage() {
       await load();
       setResultsMode({ flow, highlightRunId: run.id });
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Chạy flow thất bại");
+      setError(e instanceof Error ? e.message : t("flows.errors.runFailed", "Failed to run flow"));
     } finally {
       setRunningFlowId(null);
     }
-  }, [isAuthenticated, load]);
+  }, [isAuthenticated, load, t]);
 
   return (
     <AppShell>

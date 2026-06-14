@@ -6,6 +6,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import type { SystemAgent } from "@/lib/types";
+import { useI18n } from "@/contexts/I18nContext";
 import { CategoryBadge } from "./CategoryBadge";
 import { AgentIcon } from "./AgentIcon";
 import { agentIconContainerClass, AGENT_TOOL_BADGE_CLASS } from "./agentIconVisual";
@@ -18,7 +19,18 @@ interface Props {
   onDelete?: (agent: SystemAgent) => void;
 }
 
+const TOOL_LABEL_KEYS: Record<string, string> = {
+  web_search: "agents.form.toolWebSearch",
+};
+
 export function SystemAgentCard({ agent, isAdmin, onDuplicate, onEdit, onDelete }: Props) {
+  const { t } = useI18n();
+
+  const toolLabel = (toolId: string) => {
+    const key = TOOL_LABEL_KEYS[toolId];
+    return key ? t(key, toolId) : toolId;
+  };
+
   return (
     <div className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-3 hover:border-emerald-500/30 transition-colors">
       <div className="flex items-start justify-between gap-2">
@@ -43,7 +55,7 @@ export function SystemAgentCard({ agent, isAdmin, onDuplicate, onEdit, onDelete 
             <button
               onClick={() => onDuplicate(agent)}
               className="p-1.5 text-muted hover:text-foreground rounded-lg hover:bg-surface-hover transition-colors"
-              title="Sao chép vào agents cá nhân"
+              title={t("agents.systemCard.duplicateTitle", "Copy to personal agents")}
             >
               <DocumentDuplicateIcon className="w-4 h-4" />
             </button>
@@ -52,7 +64,7 @@ export function SystemAgentCard({ agent, isAdmin, onDuplicate, onEdit, onDelete 
             <button
               onClick={() => onEdit(agent)}
               className="p-1.5 text-muted hover:text-foreground rounded-lg hover:bg-surface-hover transition-colors"
-              title="Chỉnh sửa"
+              title={t("agents.systemCard.editTitle", "Edit")}
             >
               <PencilIcon className="w-4 h-4" />
             </button>
@@ -61,7 +73,7 @@ export function SystemAgentCard({ agent, isAdmin, onDuplicate, onEdit, onDelete 
             <button
               onClick={() => onDelete(agent)}
               className="p-1.5 text-muted hover:text-red-500 rounded-lg hover:bg-red-500/10 transition-colors"
-              title="Xóa"
+              title={t("agents.systemCard.deleteTitle", "Delete")}
             >
               <TrashIcon className="w-4 h-4" />
             </button>
@@ -89,9 +101,9 @@ export function SystemAgentCard({ agent, isAdmin, onDuplicate, onEdit, onDelete 
             {agent.model}
           </span>
         )}
-        {agent.tools.map((t) => (
-          <span key={t} className={AGENT_TOOL_BADGE_CLASS}>
-            {t}
+        {agent.tools.map((toolId) => (
+          <span key={toolId} className={AGENT_TOOL_BADGE_CLASS}>
+            {toolLabel(toolId)}
           </span>
         ))}
       </div>

@@ -13,6 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user_provider_model import UserProviderModel
 from app.repositories.user_provider_model import UserProviderModelRepository
 from app.services.provider_registry import REGISTRY, ALL_PROVIDERS, get_models
+from app.services.user_keys import is_usable_api_key
+
+
+def _key_is_usable(key: str) -> bool:
+    return is_usable_api_key(key)
 
 
 def _provider_name(provider_id: str) -> str:
@@ -127,10 +132,12 @@ def _registry_catalog_groups() -> list[dict]:
 
 
 async def list_enabled_catalog_groups(
-    db: AsyncSession, user_id: UUID | None
+    db: AsyncSession, user_id: UUID | None, *, require_keys: bool = False
 ) -> list[dict]:
     """Enabled models grouped by provider for model pickers (chat, agents)."""
     if user_id is None:
+        if require_keys:
+            return []
         return _registry_catalog_groups()
 
     groups = await list_provider_groups(db, user_id)
@@ -145,4 +152,12 @@ async def list_enabled_catalog_groups(
                     "models": enabled,
                 }
             )
+
+    if require_keys:
+        from app.services.user_keys import get_all_effective_keys
+
+        keys = await get_all_effective_keys(user_id, db)
+        configured = {p for p, k in keys.items() if _key_is_usable(k)}
+        result = [g for g in result if g["provider"] in configured]
+
     return result

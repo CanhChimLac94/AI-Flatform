@@ -6,6 +6,7 @@ import type { Agent, AgentCategory, AgentCreateRequest, AgentKnowledgeFile, Agen
 import { deleteKnowledgeFile, listKnowledgeFiles, uploadKnowledgeFile } from "@/lib/api";
 import { GroupedModelSelect } from "@/components/common/GroupedModelSelect";
 import { useModelCatalog } from "@/hooks/useModelCatalog";
+import { useI18n } from "@/contexts/I18nContext";
 import { IconPicker } from "./IconPicker";
 import { AgentIcon } from "./AgentIcon";
 import { categoryBadgeClass } from "./CategoryBadge";
@@ -17,9 +18,7 @@ interface Props {
   onCancel: () => void;
 }
 
-const ALL_TOOLS = [
-  { id: "web_search", label: "Web Search" },
-];
+const ALL_TOOLS = [{ id: "web_search", labelKey: "agents.form.toolWebSearch" }];
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -28,6 +27,7 @@ function formatBytes(bytes: number): string {
 }
 
 export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Props) {
+  const { t } = useI18n();
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [systemPrompt, setSystemPrompt] = useState(initial?.system_prompt ?? "");
@@ -41,7 +41,6 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Knowledge files (only available when editing an existing agent)
   const [knowledgeFiles, setKnowledgeFiles] = useState<AgentKnowledgeFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -58,7 +57,7 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
 
   const toggleTool = (id: string) => {
     setTools((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((toolId) => toolId !== id) : [...prev, id],
     );
   };
 
@@ -70,7 +69,10 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) { setError("Name is required"); return; }
+    if (!name.trim()) {
+      setError(t("agents.form.nameRequired", "Name is required"));
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -85,7 +87,7 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
         category_ids: categoryIds,
       });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : t("errors.saveFailed", "Save failed"));
     } finally {
       setSaving(false);
     }
@@ -101,7 +103,7 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
       const kf = await uploadKnowledgeFile(initial.id, file);
       setKnowledgeFiles((prev) => [...prev, kf]);
     } catch (err: unknown) {
-      setUploadError(err instanceof Error ? err.message : "Upload failed");
+      setUploadError(err instanceof Error ? err.message : t("agents.form.uploadFailed", "Upload failed"));
     } finally {
       setUploading(false);
     }
@@ -113,7 +115,7 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
       await deleteKnowledgeFile(initial.id, kf.id);
       setKnowledgeFiles((prev) => prev.filter((f) => f.id !== kf.id));
     } catch {
-      setUploadError("Failed to delete file");
+      setUploadError(t("agents.form.deleteFileFailed", "Failed to delete file"));
     }
   };
 
@@ -122,9 +124,16 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
       <div className="w-full max-w-xl bg-gray-900 rounded-2xl border border-gray-700 shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold text-white">
-            {initial ? "Edit agent" : "New agent"}
+            {initial
+              ? t("agents.form.editTitle", "Edit agent")
+              : t("agents.form.createTitle", "New agent")}
           </h2>
-          <button onClick={onCancel} className="text-gray-500 hover:text-gray-300">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-gray-500 hover:text-gray-300"
+            aria-label={t("common.close", "Close")}
+          >
             <XMarkIcon className="w-5 h-5" />
           </button>
         </div>
@@ -135,33 +144,39 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
           )}
 
           <div>
-            <label className="block text-xs text-gray-400 mb-1.5">Name *</label>
+            <label className="block text-xs text-gray-400 mb-1.5">
+              {t("agents.form.nameLabel", "Name *")}
+            </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Python Expert"
+              placeholder={t("agents.form.namePlaceholder", "e.g. Python Expert")}
               required
               className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
             />
           </div>
 
-          <IconPicker value={icon} onChange={setIcon} label="Icon hiển thị" />
+          <IconPicker value={icon} onChange={setIcon} label={t("agents.form.iconLabel", "Display icon")} />
 
           <div>
-            <label className="block text-xs text-gray-400 mb-1.5">Description</label>
+            <label className="block text-xs text-gray-400 mb-1.5">
+              {t("agents.form.descriptionLabel", "Description")}
+            </label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="What does this agent do?"
+              placeholder={t("agents.form.descriptionPlaceholder", "What does this agent do?")}
               className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
             />
           </div>
 
           {categories.length > 0 && (
             <div>
-              <label className="block text-xs text-gray-400 mb-1.5">Nhóm phân loại (chọn nhiều)</label>
+              <label className="block text-xs text-gray-400 mb-1.5">
+                {t("agents.form.categoriesLabel", "Categories (multi-select)")}
+              </label>
               <div className="flex flex-wrap gap-2">
                 {categories.map((cat) => {
                   const selected = categoryIds.includes(cat.id);
@@ -186,54 +201,70 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
           )}
 
           <div>
-            <label className="block text-xs text-gray-400 mb-1.5">System prompt</label>
+            <label className="block text-xs text-gray-400 mb-1.5">
+              {t("agents.form.systemPromptLabel", "System prompt")}
+            </label>
             <textarea
               value={systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
-              placeholder="You are a senior Python engineer who gives concise, idiomatic answers and always includes type hints."
+              placeholder={t(
+                "agents.form.systemPromptPlaceholder",
+                "You are a senior Python engineer who gives concise, idiomatic answers and always includes type hints.",
+              )}
               rows={5}
               className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 resize-none"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-400 mb-1.5">Model override <span className="text-gray-600">(optional)</span></label>
+            <label className="block text-xs text-gray-400 mb-1.5">
+              {t("agents.form.modelOverrideLabel", "Model override")}{" "}
+              <span className="text-gray-600">{t("agents.form.modelOptional", "(optional)")}</span>
+            </label>
             <GroupedModelSelect
               groups={modelGroups}
               value={model}
               onChange={(modelId) => setModel(modelId)}
-              emptyOption={loadingModels ? "Loading..." : "Use intent routing (default)"}
+              emptyOption={
+                loadingModels
+                  ? t("common.loading", "Loading...")
+                  : t("agents.form.modelDefaultRouting", "Use intent routing (default)")
+              }
               loading={loadingModels}
               className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-400 mb-2">Tools</label>
+            <label className="block text-xs text-gray-400 mb-2">
+              {t("agents.form.toolsLabel", "Tools")}
+            </label>
             <div className="flex flex-wrap gap-2">
-              {ALL_TOOLS.map((t) => (
+              {ALL_TOOLS.map((tool) => (
                 <button
-                  key={t.id}
+                  key={tool.id}
                   type="button"
-                  onClick={() => toggleTool(t.id)}
+                  onClick={() => toggleTool(tool.id)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                    tools.includes(t.id)
+                    tools.includes(tool.id)
                       ? "bg-blue-600/20 border-blue-500 text-blue-400"
                       : "bg-gray-800 border-gray-600 text-gray-400 hover:border-gray-400"
                   }`}
                 >
-                  {t.label}
+                  {t(tool.labelKey, "Web search")}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Knowledge Base — only shown when editing an existing agent */}
           {initial?.id && (
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs text-gray-400">
-                  Knowledge base <span className="text-gray-600">(PDF, DOCX, XLSX, TXT, MD)</span>
+                  {t("agents.form.knowledgeBaseLabel", "Knowledge base")}{" "}
+                  <span className="text-gray-600">
+                    {t("agents.form.knowledgeFormats", "(PDF, DOCX, XLSX, TXT, MD)")}
+                  </span>
                 </label>
                 <button
                   type="button"
@@ -242,7 +273,9 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
                   className="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg bg-gray-800 border border-gray-600 text-gray-300 hover:border-blue-500 hover:text-blue-400 disabled:opacity-40 transition-colors"
                 >
                   <DocumentArrowUpIcon className="w-3.5 h-3.5" />
-                  {uploading ? "Uploading…" : "Upload file"}
+                  {uploading
+                    ? t("agents.form.uploading", "Uploading…")
+                    : t("agents.form.uploadFile", "Upload file")}
                 </button>
                 <input
                   ref={fileInputRef}
@@ -259,7 +292,7 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
 
               {knowledgeFiles.length === 0 ? (
                 <p className="text-xs text-gray-600 py-2 text-center border border-dashed border-gray-700 rounded-lg">
-                  No documents uploaded yet
+                  {t("agents.form.noDocuments", "No documents uploaded yet")}
                 </p>
               ) : (
                 <ul className="space-y-1.5">
@@ -276,7 +309,8 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
                         type="button"
                         onClick={() => handleKnowledgeDelete(kf)}
                         className="ml-3 text-gray-600 hover:text-red-400 transition-colors shrink-0"
-                        title="Remove"
+                        title={t("agents.form.removeFile", "Remove")}
+                        aria-label={t("agents.form.removeFile", "Remove")}
                       >
                         <TrashIcon className="w-4 h-4" />
                       </button>
@@ -289,7 +323,7 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
 
           {!initial?.id && (
             <p className="text-xs text-gray-600 italic">
-              Save the agent first to upload knowledge documents.
+              {t("agents.form.saveFirstForKnowledge", "Save the agent first to upload knowledge documents.")}
             </p>
           )}
 
@@ -302,7 +336,7 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
               className="rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500"
             />
             <label htmlFor="is-public" className="text-sm text-gray-300">
-              Public — visible to other users
+              {t("agents.form.publicLabel", "Public — visible to other users")}
             </label>
           </div>
 
@@ -312,14 +346,18 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
               disabled={saving}
               className="flex-1 py-2.5 text-sm font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-lg transition-colors"
             >
-              {saving ? "Saving…" : initial ? "Save changes" : "Create agent"}
+              {saving
+                ? t("agents.form.saving", "Saving…")
+                : initial
+                  ? t("agents.form.saveChanges", "Save changes")
+                  : t("agents.form.createAgent", "Create agent")}
             </button>
             <button
               type="button"
               onClick={onCancel}
               className="px-5 py-2.5 text-sm text-gray-400 hover:text-gray-200 border border-gray-700 rounded-lg transition-colors"
             >
-              Cancel
+              {t("common.cancel", "Cancel")}
             </button>
           </div>
         </form>

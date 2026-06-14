@@ -3,9 +3,9 @@
 import { Handle, Position, useReactFlow } from "@xyflow/react";
 import type { NodeData } from "./types";
 import { OutputActions } from "./OutputActions";
-import { EXPORT_FORMAT_OPTIONS } from "./outputExport";
-import type { OutputFileFormat } from "./outputExport";
+import { EXPORT_FORMAT_VALUES, type OutputFileFormat } from "./outputExport";
 import { FlowIcon, type FlowIconKey } from "./flowIcons";
+import { useI18n } from "@/contexts/I18nContext";
 
 const FIELD_INPUT =
   "bg-input-bg border border-border rounded-lg px-2.5 py-1.5 text-[11px] text-foreground outline-none w-full";
@@ -112,6 +112,7 @@ interface CustomNodeProps {
 }
 
 export function StartNode({ id, data, selected }: CustomNodeProps) {
+  const { t } = useI18n();
   const { setNodes } = useReactFlow();
   const updateData = (field: string, val: string) => {
     setNodes((nds) =>
@@ -122,7 +123,7 @@ export function StartNode({ id, data, selected }: CustomNodeProps) {
   return (
     <NodeContainer
       id={id}
-      title="Đầu vào"
+      title={t("flows.nodes.start.title", "Input")}
       icon="input"
       colorClass="bg-blue-500/10 dark:bg-blue-500/5"
       iconColor="text-blue-700 dark:text-blue-400"
@@ -131,14 +132,14 @@ export function StartNode({ id, data, selected }: CustomNodeProps) {
     >
       {data.isEditing ? (
         <div className="flex flex-col gap-3">
-          <ConfigField label="Tên Node">
+          <ConfigField label={t("flows.nodes.start.nodeName", "Node name")}>
             <input
               value={data.label}
               onChange={(e) => updateData("label", e.target.value)}
               className={`${FIELD_INPUT} focus:border-blue-500/50`}
             />
           </ConfigField>
-          <ConfigField label="Dữ liệu">
+          <ConfigField label={t("flows.nodes.start.data", "Data")}>
             <textarea
               value={data.value}
               onChange={(e) => updateData("value", e.target.value)}
@@ -150,7 +151,7 @@ export function StartNode({ id, data, selected }: CustomNodeProps) {
         <div className="flex flex-col gap-1.5">
           <span className="text-[13px] font-bold text-foreground">{data.label}</span>
           <div className="bg-surface-muted p-2.5 rounded-xl border border-border text-[11px] text-muted italic leading-relaxed min-h-[40px]">
-            {data.value || "Đang chờ dữ liệu..."}
+            {data.value || t("flows.nodes.start.waiting", "Waiting for data…")}
           </div>
         </div>
       )}
@@ -164,6 +165,7 @@ export function StartNode({ id, data, selected }: CustomNodeProps) {
 }
 
 export function AgentNode({ id, data, selected }: CustomNodeProps) {
+  const { t } = useI18n();
   const { setNodes } = useReactFlow();
   const updateData = (field: string, val: string) => {
     setNodes((nds) =>
@@ -174,7 +176,7 @@ export function AgentNode({ id, data, selected }: CustomNodeProps) {
   return (
     <NodeContainer
       id={id}
-      title="AI Agent"
+      title={t("flows.nodes.agent.title", "AI Agent")}
       icon="agent"
       colorClass="bg-purple-500/10 dark:bg-purple-500/5"
       iconColor="text-purple-700 dark:text-purple-400"
@@ -189,25 +191,25 @@ export function AgentNode({ id, data, selected }: CustomNodeProps) {
 
       {data.isEditing ? (
         <div className="flex flex-col gap-3">
-          <ConfigField label="Tên Agent">
+          <ConfigField label={t("flows.nodes.agent.agentName", "Agent name")}>
             <input
               value={data.label}
               onChange={(e) => updateData("label", e.target.value)}
               className={`${FIELD_INPUT} focus:border-purple-500/50`}
             />
           </ConfigField>
-          <ConfigField label="Mô hình">
+          <ConfigField label={t("flows.nodes.agent.model", "Model")}>
             <select
               value={data.model}
               onChange={(e) => updateData("model", e.target.value)}
               className={`${FIELD_INPUT} focus:border-purple-500/50 cursor-pointer`}
             >
-              <option value="Gemini">Gemini Pro</option>
-              <option value="GPT-4o">GPT-4o</option>
-              <option value="Claude">Claude</option>
+              <option value="Gemini">{t("flows.nodes.agent.modelGemini", "Gemini Pro")}</option>
+              <option value="GPT-4o">{t("flows.nodes.agent.modelGpt4o", "GPT-4o")}</option>
+              <option value="Claude">{t("flows.nodes.agent.modelClaude", "Claude")}</option>
             </select>
           </ConfigField>
-          <ConfigField label="Chỉ dẫn (Prompt)">
+          <ConfigField label={t("flows.nodes.agent.prompt", "Instructions (prompt)")}>
             <textarea
               value={data.prompt}
               onChange={(e) => updateData("prompt", e.target.value)}
@@ -225,7 +227,7 @@ export function AgentNode({ id, data, selected }: CustomNodeProps) {
           </div>
           <div className="h-[1px] w-full bg-border" />
           <p className="text-[10px] text-muted line-clamp-3 leading-relaxed italic">
-            {data.prompt || "Chưa thiết lập chỉ dẫn."}
+            {data.prompt || t("flows.nodes.agent.noPrompt", "No instructions set.")}
           </p>
         </div>
       )}
@@ -239,6 +241,7 @@ export function AgentNode({ id, data, selected }: CustomNodeProps) {
 }
 
 export function OutputNode({ id, data, selected }: CustomNodeProps) {
+  const { t } = useI18n();
   const { setNodes } = useReactFlow();
   const exportFormat = (data.exportFormat ?? "auto") as OutputFileFormat;
 
@@ -251,7 +254,7 @@ export function OutputNode({ id, data, selected }: CustomNodeProps) {
   return (
     <NodeContainer
       id={id}
-      title="Kết quả"
+      title={t("flows.nodes.output.title", "Output")}
       icon="terminal"
       colorClass="bg-green-500/10 dark:bg-green-500/5"
       iconColor="text-green-700 dark:text-green-400"
@@ -266,29 +269,31 @@ export function OutputNode({ id, data, selected }: CustomNodeProps) {
 
       {data.isEditing ? (
         <div className="flex flex-col gap-3">
-          <ConfigField label="Tên Output">
+          <ConfigField label={t("flows.nodes.output.outputName", "Output name")}>
             <input
               value={data.label}
               onChange={(e) => updateData("label", e.target.value)}
               className={`${FIELD_INPUT} focus:border-green-500/50`}
             />
           </ConfigField>
-          <ConfigField label="Định dạng xuất mặc định">
+          <ConfigField label={t("flows.nodes.output.exportFormat", "Default export format")}>
             <select
               value={exportFormat}
               onChange={(e) => updateData("exportFormat", e.target.value)}
               className={`${FIELD_INPUT} focus:border-green-500/50 cursor-pointer`}
             >
-              {EXPORT_FORMAT_OPTIONS.map(({ value, label }) => (
-                <option key={value} value={value}>{label}</option>
+              {EXPORT_FORMAT_VALUES.map((value) => (
+                <option key={value} value={value}>
+                  {t(`flows.exportFormats.${value}`, value.toUpperCase())}
+                </option>
               ))}
             </select>
           </ConfigField>
-          <ConfigField label="Nội dung kết quả">
+          <ConfigField label={t("flows.nodes.output.content", "Result content")}>
             <textarea
               value={data.value ?? ""}
               onChange={(e) => updateData("value", e.target.value)}
-              placeholder="Nhập hoặc chạy flow để nhận kết quả..."
+              placeholder={t("flows.nodes.output.contentPlaceholder", "Enter content or run the flow to get results…")}
               className={`${FIELD_INPUT} focus:border-green-500/50 min-h-[100px] resize-none font-mono`}
             />
           </ConfigField>
@@ -300,7 +305,9 @@ export function OutputNode({ id, data, selected }: CustomNodeProps) {
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[9px] text-muted uppercase font-bold tracking-wider">Console</span>
+          <span className="text-[9px] text-muted uppercase font-bold tracking-wider">
+            {t("flows.nodes.output.console", "Console")}
+          </span>
           <OutputActions
             content={data.value}
             label={data.label}
@@ -311,7 +318,7 @@ export function OutputNode({ id, data, selected }: CustomNodeProps) {
         <div className="bg-surface-muted p-3 rounded-xl border border-border min-h-[80px] max-h-[200px] overflow-y-auto flow-scrollbar font-mono shadow-inner">
           <p className="text-[10px] text-green-700 dark:text-green-400 leading-snug whitespace-pre-wrap break-words">
             <span className="text-muted mr-1">$</span>
-            {data.value || "Hệ thống đang đợi tín hiệu..."}
+            {data.value || t("flows.nodes.output.waiting", "Waiting for signal…")}
           </p>
         </div>
       </div>

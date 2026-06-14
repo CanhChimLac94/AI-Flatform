@@ -110,13 +110,13 @@ export function FlowActionsMenu({
         >
           <MenuItem
             icon={<FlowIcon icon="upload" className="w-4 h-4" />}
-            label="Import JSON"
+            label={t("flows.designer.importJson", "Import JSON")}
             disabled={disabled}
             onClick={() => closeAnd(onImport)}
           />
           <MenuItem
             icon={<FlowIcon icon="download" className="w-4 h-4" />}
-            label="Export JSON"
+            label={t("flows.designer.exportJson", "Export JSON")}
             disabled={disabled}
             onClick={() => closeAnd(onExport)}
           />
@@ -125,7 +125,7 @@ export function FlowActionsMenu({
               <div className="border-t border-border my-1" />
               <MenuItem
                 icon={<FlowIcon icon="save" className="w-4 h-4" />}
-                label={`Xuất kết quả (${outputCount})`}
+                label={t("flows.designer.exportOutputs", "Export results ({count})", { count: outputCount })}
                 accent="green"
                 onClick={() => closeAnd(onExportOutputs)}
               />

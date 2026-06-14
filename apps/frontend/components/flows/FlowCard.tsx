@@ -27,9 +27,9 @@ interface Props {
   onViewResults?: (flow: AgentFlowSummary) => void;
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale: string): string {
   try {
-    return new Date(iso).toLocaleDateString("vi-VN", {
+    return new Date(iso).toLocaleDateString(locale === "vi" ? "vi-VN" : "en-US", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -41,12 +41,16 @@ function formatDate(iso: string): string {
   }
 }
 
-function scheduleLabel(flow: AgentFlowSummary): string | null {
+function scheduleLabel(flow: AgentFlowSummary, locale: string, t: (key: string, fallback?: string, vars?: Record<string, string | number>) => string): string | null {
   if (!flow.schedule_enabled) return null;
   if (flow.next_run_at) {
-    return `Lịch: ${new Date(flow.next_run_at).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" })}`;
+    const time = new Date(flow.next_run_at).toLocaleString(locale === "vi" ? "vi-VN" : "en-US", {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+    return t("flows.card.scheduleAt", "Schedule: {time}", { time });
   }
-  return "Lịch: đã bật";
+  return t("flows.card.scheduleEnabled", "Schedule: enabled");
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -55,11 +59,17 @@ const STATUS_COLORS: Record<string, string> = {
   running: "text-amber-500",
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  success: "Thành công",
-  failed: "Lỗi",
-  running: "Đang chạy",
-};
+function statusLabel(
+  status: string,
+  t: (key: string, fallback?: string) => string,
+): string {
+  const labels: Record<string, string> = {
+    success: t("flows.status.success", "Success"),
+    failed: t("flows.status.failed", "Failed"),
+    running: t("flows.status.running", "Running"),
+  };
+  return labels[status] ?? status;
+}
 
 function MenuItem({
   icon: Icon,
@@ -128,8 +138,8 @@ export function FlowCard({
   onViewResults,
 }: Props) {
   const mounted = useHasMounted();
-  const { t } = useI18n();
-  const scheduleText = mounted ? scheduleLabel(flow) : null;
+  const { t, locale } = useI18n();
+  const scheduleText = mounted ? scheduleLabel(flow, locale, t) : null;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -223,7 +233,7 @@ export function FlowCard({
                 </MenuSection>
               )}
 
-              <MenuSection title="Flow">
+              <MenuSection title={t("flows.sectionFlow", "Flow")}>
                 <MenuItem
                   icon={PencilIcon}
                   label={t("flows.editInfo")}
@@ -252,10 +262,10 @@ export function FlowCard({
 
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
         <span className="bg-surface-elevated text-muted px-2 py-0.5 rounded-full border border-border">
-          {flow.node_count} {t("flows.nodes")}
+          {flow.node_count} {t("flows.nodeLabel", "nodes")}
         </span>
         <span className="bg-surface-elevated text-muted px-2 py-0.5 rounded-full border border-border">
-          {flow.edge_count} {t("flows.connections")}
+          {flow.edge_count} {t("flows.connectionLabel", "connections")}
         </span>
         {flow.last_run_status && (
           <button
@@ -266,11 +276,11 @@ export function FlowCard({
             } ${showSchedule && onViewResults ? "cursor-pointer" : "cursor-default"}`}
             title={showSchedule && onViewResults ? t("flows.viewResultsLatest") : undefined}
           >
-            {STATUS_LABEL[flow.last_run_status] ?? flow.last_run_status}
+            {statusLabel(flow.last_run_status, t)}
           </button>
         )}
         <span className="text-muted ml-auto" suppressHydrationWarning>
-          {mounted ? formatDate(flow.updated_at) : "—"}
+          {mounted ? formatDate(flow.updated_at, locale) : "—"}
         </span>
       </div>
     </div>

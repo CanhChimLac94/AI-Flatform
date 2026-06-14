@@ -16,7 +16,6 @@ import {
 } from "@heroicons/react/24/outline";
 import type { Conversation } from "@/lib/types";
 import { createConversation, deleteConversation, fetchConversations, renameConversation } from "@/lib/api";
-import { QuotaMeter } from "./QuotaMeter";
 import { SIDEBAR_NAV_ITEMS } from "./navVisuals";
 import { useAuth } from "@/contexts/AuthContext";
 import { useI18n } from "@/contexts/I18nContext";
@@ -369,12 +368,6 @@ export function Sidebar({
         )}
       </div>
 
-      {/* Footer */}
-      {isAuthenticated && (
-        <div className={`border-t border-gray-700 ${isDrawerExpanded ? "px-3 py-3" : "px-1 py-2"}`}>
-          <QuotaMeter collapsed={!isDrawerExpanded} />
-        </div>
-      )}
     </aside>
   );
 }

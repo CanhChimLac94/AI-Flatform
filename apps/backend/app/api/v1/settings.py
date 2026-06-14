@@ -50,7 +50,7 @@ from app.services.provider_models import (
     list_provider_entries,
     list_provider_groups,
 )
-from app.services.user_keys import invalidate_cache
+from app.services.user_keys import invalidate_cache, get_all_effective_keys, is_usable_api_key
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -64,12 +64,23 @@ class StoredKeyInfo(BaseModel):
     masked_key: str
 
 
+class ProviderChannelStatus(BaseModel):
+    """Real readiness for chat: requires usable active user key + enabled models."""
+    chat_ready: bool
+    has_stored_keys: bool
+    has_active_key: bool
+    key_usable: bool
+    enabled_models_count: int
+    status_code: str
+
+
 class ProviderKeyGroup(BaseModel):
     provider: str
     name: str
     is_set: bool
     using_system_key: bool
     keys: list[StoredKeyInfo]
+    channel_status: ProviderChannelStatus
 
 
 class AddKeyRequest(BaseModel):
@@ -167,25 +178,42 @@ class ProviderCatalogItem(BaseModel):
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _system_keys() -> dict[str, str]:
-    from app.core.config import settings as s
-    return {
-        "openai":     s.OPENAI_API_KEY,
-        "anthropic":  s.ANTHROPIC_API_KEY,
-        "groq":       s.GROQ_API_KEY,
-        "google":     getattr(s, "GOOGLE_API_KEY", ""),
-        "openrouter": getattr(s, "OPENROUTER_API_KEY", ""),
-        "nvidia":     getattr(s, "NVIDIA_API_KEY", ""),
-    }
-
-
-def _sys_key_is_set(key: str) -> bool:
-    return bool(key) and not key.startswith("sk-...") and len(key) > 8
-
-
 def _validate_provider(provider: str) -> None:
     if provider not in SUPPORTED_PROVIDERS:
         raise HTTPException(status_code=400, detail=f"Unsupported provider: {provider}")
+
+
+def _build_channel_status(
+    stored_keys: list[StoredKeyInfo],
+    effective_key: str,
+    enabled_models_count: int,
+) -> ProviderChannelStatus:
+    has_stored = len(stored_keys) > 0
+    has_active = any(k.is_active for k in stored_keys)
+    key_usable = is_usable_api_key(effective_key)
+    chat_ready = key_usable and enabled_models_count > 0
+
+    if chat_ready:
+        code = "chat_ready"
+    elif not has_stored:
+        code = "no_key"
+    elif not has_active:
+        code = "no_active_key"
+    elif not key_usable:
+        code = "key_not_usable"
+    elif enabled_models_count == 0:
+        code = "no_enabled_models"
+    else:
+        code = "unavailable"
+
+    return ProviderChannelStatus(
+        chat_ready=chat_ready,
+        has_stored_keys=has_stored,
+        has_active_key=has_active,
+        key_usable=key_usable,
+        enabled_models_count=enabled_models_count,
+        status_code=code,
+    )
 
 
 # ── API key management ────────────────────────────────────────────────────────
@@ -196,9 +224,14 @@ async def list_api_keys(
     db: AsyncSession = Depends(get_db),
 ):
     """Returns all supported providers with their stored keys and connection status."""
-    sys_keys = _system_keys()
     repo = UserApiKeyRepository(db)
     all_records = await repo.list_for_user(current_user.id)
+    effective_keys = await get_all_effective_keys(current_user.id, db)
+    catalog_groups = await list_provider_groups(db, current_user.id)
+    enabled_counts = {
+        g["provider"]: sum(1 for m in g["models"] if m.is_enabled)
+        for g in catalog_groups
+    }
 
     by_provider: dict[str, list] = {p: [] for p in SUPPORTED_PROVIDERS}
     for r in all_records:
@@ -225,6 +258,10 @@ async def list_api_keys(
                 masked_key=masked,
             ))
 
+        effective_key = effective_keys.get(provider_id, "")
+        enabled_models_count = enabled_counts.get(provider_id, 0)
+        channel_status = _build_channel_status(stored_keys, effective_key, enabled_models_count)
+
         if stored_keys:
             result.append(ProviderKeyGroup(
                 provider=provider_id,
@@ -232,16 +269,16 @@ async def list_api_keys(
                 is_set=True,
                 using_system_key=False,
                 keys=stored_keys,
+                channel_status=channel_status,
             ))
         else:
-            sys_key = sys_keys.get(provider_id, "")
-            has_sys = _sys_key_is_set(sys_key)
             result.append(ProviderKeyGroup(
                 provider=provider_id,
                 name=name,
-                is_set=has_sys,
-                using_system_key=has_sys,
+                is_set=False,
+                using_system_key=False,
                 keys=[],
+                channel_status=channel_status,
             ))
     return result
 
@@ -446,12 +483,13 @@ async def get_provider_models(
 
 @router.get("/models/catalog", response_model=list[ProviderModelGroupOut])
 async def get_models_catalog(
+    require_keys: bool = False,
     current_user: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Enabled models grouped by provider, with optional display names."""
     user_id = current_user.id if current_user is not None else None
-    groups = await list_enabled_catalog_groups(db, user_id)
+    groups = await list_enabled_catalog_groups(db, user_id, require_keys=require_keys)
     return [
         ProviderModelGroupOut(
             provider=g["provider"],

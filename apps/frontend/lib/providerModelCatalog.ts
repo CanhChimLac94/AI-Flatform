@@ -1,7 +1,31 @@
 import { listModelCatalog } from "./api";
 import { getGuestProviderModelGroups } from "./guestProviderModels";
+import { loadGuestSettings } from "./guestSettings";
 import { getProviderVisual } from "./providerVisuals";
 import type { ProviderModelEntry, ProviderModelGroup } from "./types";
+
+export const GUEST_SETTINGS_UPDATED_EVENT = "aichat:guest_settings_updated";
+
+export function isConfiguredApiKey(key: string | undefined | null): boolean {
+  const k = (key ?? "").trim();
+  return k.length > 8 && !k.startsWith("sk-...");
+}
+
+export function configuredGuestProviders(): Set<string> {
+  const { apiKeys } = loadGuestSettings();
+  return new Set(
+    Object.entries(apiKeys)
+      .filter(([, key]) => isConfiguredApiKey(key))
+      .map(([provider]) => provider),
+  );
+}
+
+export function filterCatalogByConfiguredProviders(
+  groups: ProviderModelGroup[],
+  providers: Set<string>,
+): ProviderModelGroup[] {
+  return groups.filter((g) => providers.has(g.provider));
+}
 
 export function displayModelLabel(entry: ProviderModelEntry): string {
   return entry.display_name?.trim() || entry.model_id;
@@ -23,6 +47,17 @@ export async function loadModelCatalog(isAuthenticated: boolean): Promise<Provid
     return filterEnabledCatalogGroups(getGuestProviderModelGroups());
   }
   const groups = await listModelCatalog();
+  return filterEnabledCatalogGroups(groups);
+}
+
+/** Model catalog for chat — only providers with a configured API key. */
+export async function loadChatModelCatalog(isAuthenticated: boolean): Promise<ProviderModelGroup[]> {
+  if (!isAuthenticated) {
+    const configured = configuredGuestProviders();
+    const groups = filterEnabledCatalogGroups(getGuestProviderModelGroups());
+    return filterCatalogByConfiguredProviders(groups, configured);
+  }
+  const groups = await listModelCatalog({ requireKeys: true });
   return filterEnabledCatalogGroups(groups);
 }
 

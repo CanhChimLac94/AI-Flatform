@@ -73,9 +73,9 @@ export function buildAgentDropData(agent: FlowPaletteAgent): Record<string, unkn
   };
 }
 
-export function sourceBadgeLabel(source: FlowAgentSource): string | null {
-  if (source === "system") return "Hệ thống";
-  if (source === "user") return "Cá nhân";
+export function sourceBadgeLabelKey(source: FlowAgentSource): string | null {
+  if (source === "system") return "flows.agentSource.system";
+  if (source === "user") return "flows.agentSource.personal";
   return null;
 }
 

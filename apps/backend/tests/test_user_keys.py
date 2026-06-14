@@ -4,10 +4,9 @@ Tests for app/services/user_keys.py — get_all_effective_keys().
 Key invariants verified:
   1. Uses a single list_for_user() call, NOT N concurrent repo.get() calls.
      (Concurrent repo.get() on the same AsyncSession raises InvalidRequestError.)
-  2. User-stored key takes precedence over the system .env key.
-  3. Falls back to system key when no user record exists.
-  4. Populates Redis cache for user keys; subsequent calls hit cache only.
-  5. Decryption failures are silently dropped (fall through to system key).
+  2. Only user-stored keys are returned; system .env keys are never used.
+  3. Populates Redis cache for user keys; subsequent calls hit cache only.
+  4. Decryption failures yield an empty key for that provider.
 """
 
 import uuid
@@ -100,8 +99,8 @@ class TestGetAllEffectiveKeys:
         assert set(result.keys()) == {"openai", "anthropic", "groq", "google", "openrouter", "nvidia"}
 
     @pytest.mark.asyncio
-    async def test_user_key_overrides_system_key(self, db_session):
-        """User-stored key wins over the .env system key."""
+    async def test_user_key_returned(self, db_session):
+        """User-stored key is returned when present."""
         redis = _make_redis()
 
         records = [_make_key_record("openai", "enc_user_openai_key")]
@@ -117,10 +116,6 @@ class TestGetAllEffectiveKeys:
                 "app.services.user_keys.decrypt_key",
                 side_effect=lambda enc: enc.replace("enc_", "plain_"),
             ),
-            patch.dict(
-                "app.services.user_keys._SYSTEM_KEYS",
-                {"openai": "system_openai_key"},
-            ),
         ):
             from app.services.user_keys import get_all_effective_keys
             result = await get_all_effective_keys(USER_ID, db_session)
@@ -128,8 +123,8 @@ class TestGetAllEffectiveKeys:
         assert result["openai"] == "plain_user_openai_key"
 
     @pytest.mark.asyncio
-    async def test_falls_back_to_system_key(self, db_session):
-        """When no user record, the system .env key is returned."""
+    async def test_no_user_key_returns_empty(self, db_session):
+        """When no user record exists, an empty string is returned."""
         redis = _make_redis()
 
         with (
@@ -139,15 +134,11 @@ class TestGetAllEffectiveKeys:
                 new_callable=AsyncMock,
                 return_value=[],
             ),
-            patch.dict(
-                "app.services.user_keys._SYSTEM_KEYS",
-                {"groq": "sys_groq_key"},
-            ),
         ):
             from app.services.user_keys import get_all_effective_keys
             result = await get_all_effective_keys(USER_ID, db_session)
 
-        assert result["groq"] == "sys_groq_key"
+        assert result["groq"] == ""
 
     @pytest.mark.asyncio
     async def test_all_cached_skips_db(self, db_session):
@@ -173,8 +164,8 @@ class TestGetAllEffectiveKeys:
         assert result["groq"] == "cached_groq"
 
     @pytest.mark.asyncio
-    async def test_decryption_failure_falls_back_to_system_key(self, db_session):
-        """A corrupt encrypted key silently falls through to the system key."""
+    async def test_decryption_failure_returns_empty(self, db_session):
+        """A corrupt encrypted key yields an empty string for that provider."""
         redis = _make_redis()
         records = [_make_key_record("anthropic", "corrupt_enc")]
 
@@ -189,15 +180,11 @@ class TestGetAllEffectiveKeys:
                 "app.services.user_keys.decrypt_key",
                 side_effect=ValueError("bad padding"),
             ),
-            patch.dict(
-                "app.services.user_keys._SYSTEM_KEYS",
-                {"anthropic": "sys_anthropic"},
-            ),
         ):
             from app.services.user_keys import get_all_effective_keys
             result = await get_all_effective_keys(USER_ID, db_session)
 
-        assert result["anthropic"] == "sys_anthropic"
+        assert result["anthropic"] == ""
 
     @pytest.mark.asyncio
     async def test_user_key_is_cached_after_db_fetch(self, db_session):

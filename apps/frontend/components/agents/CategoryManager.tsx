@@ -4,6 +4,7 @@ import { useState } from "react";
 import { PencilIcon, PlusIcon, TrashIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import type { AgentCategory, AgentCategoryCreateRequest, AgentCategoryUpdateRequest } from "@/lib/types";
 import { createAgentCategory, deleteAgentCategory, updateAgentCategory } from "@/lib/api";
+import { useI18n } from "@/contexts/I18nContext";
 import { AgentIcon } from "./AgentIcon";
 import { IconPicker } from "./IconPicker";
 import { categoryBadgeClass } from "./CategoryBadge";
@@ -20,6 +21,7 @@ interface CategoryManagerProps {
 type FormMode = { type: "create" } | { type: "edit"; category: AgentCategory } | null;
 
 export function CategoryManager({ categories, onChange, embedded = false }: CategoryManagerProps) {
+  const { t } = useI18n();
   const [formMode, setFormMode] = useState<FormMode>(null);
   const [deleteTarget, setDeleteTarget] = useState<AgentCategory | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,11 +36,17 @@ export function CategoryManager({ categories, onChange, embedded = false }: Cate
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         {embedded ? (
-          <p className="text-xs text-gray-500">Quản lý chủ đề/lĩnh vực cho agents hệ thống</p>
+          <p className="text-xs text-gray-500">
+            {t("agents.categories.manageHint", "Manage topics/domains for system agents")}
+          </p>
         ) : (
           <div>
-            <h2 className="text-sm font-semibold text-white">Nhóm phân loại</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Quản lý chủ đề/lĩnh vực cho agents hệ thống</p>
+            <h2 className="text-sm font-semibold text-white">
+              {t("agents.categories.title", "Categories")}
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {t("agents.categories.manageHint", "Manage topics/domains for system agents")}
+            </p>
           </div>
         )}
         <button
@@ -47,7 +55,7 @@ export function CategoryManager({ categories, onChange, embedded = false }: Cate
           className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors self-start"
         >
           <PlusIcon className="w-4 h-4" />
-          Thêm nhóm
+          {t("agents.categories.addGroup", "Add category")}
         </button>
       </div>
 
@@ -83,7 +91,7 @@ export function CategoryManager({ categories, onChange, embedded = false }: Cate
                 type="button"
                 onClick={() => setFormMode({ type: "edit", category: cat })}
                 className="p-1.5 text-gray-500 hover:text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
-                title="Sửa nhóm"
+                title={t("agents.categories.editGroup", "Edit category")}
               >
                 <PencilIcon className="w-4 h-4" />
               </button>
@@ -91,7 +99,7 @@ export function CategoryManager({ categories, onChange, embedded = false }: Cate
                 type="button"
                 onClick={() => setDeleteTarget(cat)}
                 className="p-1.5 text-gray-500 hover:text-red-400 rounded-lg hover:bg-red-900/20 transition-colors"
-                title="Xóa nhóm"
+                title={t("agents.categories.deleteGroup", "Delete category")}
               >
                 <TrashIcon className="w-4 h-4" />
               </button>
@@ -99,7 +107,9 @@ export function CategoryManager({ categories, onChange, embedded = false }: Cate
           </div>
         ))}
         {categories.length === 0 && (
-          <p className="text-sm text-gray-500 text-center py-6">Chưa có nhóm phân loại nào.</p>
+          <p className="text-sm text-gray-500 text-center py-6">
+            {t("agents.categories.empty", "No categories yet.")}
+          </p>
         )}
       </div>
 
@@ -118,9 +128,14 @@ export function CategoryManager({ categories, onChange, embedded = false }: Cate
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
           <div className="w-full max-w-sm bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-6">
-            <h3 className="text-base font-semibold text-white mb-2">Xóa nhóm &quot;{deleteTarget.name}&quot;?</h3>
+            <h3 className="text-base font-semibold text-white mb-2">
+              {t("agents.categories.deleteGroupTitle", "Delete category \"{name}\"?", { name: deleteTarget.name })}
+            </h3>
             <p className="text-sm text-gray-400 mb-6">
-              Agents trong nhóm sẽ mất liên kết với nhóm này. Hành động không thể hoàn tác.
+              {t(
+                "agents.categories.deleteGroupBody",
+                "Agents in this category will lose this link. This cannot be undone.",
+              )}
             </p>
             <div className="flex gap-3">
               <button
@@ -132,20 +147,24 @@ export function CategoryManager({ categories, onChange, embedded = false }: Cate
                     setDeleteTarget(null);
                     onChange();
                   } catch (e: unknown) {
-                    setError(e instanceof Error ? e.message : "Xóa nhóm thất bại");
+                    setError(
+                      e instanceof Error
+                        ? e.message
+                        : t("agents.categories.deleteGroupFailed", "Failed to delete category"),
+                    );
                     setDeleteTarget(null);
                   }
                 }}
                 className="flex-1 py-2 text-sm font-medium bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors"
               >
-                Xóa
+                {t("common.delete", "Delete")}
               </button>
               <button
                 type="button"
                 onClick={() => setDeleteTarget(null)}
                 className="px-4 py-2 text-sm text-gray-400 hover:text-gray-200 border border-gray-700 rounded-lg transition-colors"
               >
-                Hủy
+                {t("common.cancel", "Cancel")}
               </button>
             </div>
           </div>
@@ -166,6 +185,7 @@ function CategoryFormModal({
   onSaved: () => void;
   onError: (msg: string | null) => void;
 }) {
+  const { t } = useI18n();
   const [name, setName] = useState(initial?.name ?? "");
   const [slug, setSlug] = useState(initial?.slug ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -178,7 +198,7 @@ function CategoryFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setLocalError("Tên nhóm là bắt buộc");
+      setLocalError(t("agents.categories.nameRequired", "Category name is required"));
       return;
     }
     setSaving(true);
@@ -208,7 +228,7 @@ function CategoryFormModal({
       }
       onSaved();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Lưu thất bại";
+      const msg = err instanceof Error ? err.message : t("errors.saveFailed", "Save failed");
       setLocalError(msg);
       onError(msg);
     } finally {
@@ -221,7 +241,9 @@ function CategoryFormModal({
       <div className="w-full max-w-lg bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 shrink-0">
           <h3 className="text-base font-semibold text-white">
-            {initial ? "Sửa nhóm phân loại" : "Thêm nhóm phân loại"}
+            {initial
+              ? t("agents.categories.formEditTitle", "Edit category")
+              : t("agents.categories.formCreateTitle", "Add category")}
           </h3>
           <button type="button" onClick={onClose} className="p-1 text-gray-500 hover:text-gray-300">
             <XMarkIcon className="w-5 h-5" />
@@ -229,14 +251,16 @@ function CategoryFormModal({
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          {(localError) && (
+          {localError && (
             <div className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2">
               {localError}
             </div>
           )}
 
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Tên nhóm *</label>
+            <label className="block text-xs text-gray-400 mb-1">
+              {t("agents.categories.nameLabel", "Category name *")}
+            </label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -245,17 +269,21 @@ function CategoryFormModal({
           </div>
 
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Slug (tùy chọn)</label>
+            <label className="block text-xs text-gray-400 mb-1">
+              {t("agents.categories.slugLabel", "Slug (optional)")}
+            </label>
             <input
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
-              placeholder="tu-dong-neu-de-trong"
+              placeholder={t("agents.categories.slugPlaceholder", "auto-generated-if-empty")}
               className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Mô tả</label>
+            <label className="block text-xs text-gray-400 mb-1">
+              {t("agents.categories.descriptionLabel", "Description")}
+            </label>
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -265,7 +293,9 @@ function CategoryFormModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Màu badge</label>
+              <label className="block text-xs text-gray-400 mb-1">
+                {t("agents.categories.badgeColorLabel", "Badge color")}
+              </label>
               <select
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
@@ -277,7 +307,9 @@ function CategoryFormModal({
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Thứ tự hiển thị</label>
+              <label className="block text-xs text-gray-400 mb-1">
+                {t("agents.categories.sortOrderLabel", "Display order")}
+              </label>
               <input
                 type="number"
                 value={sortOrder}
@@ -287,7 +319,11 @@ function CategoryFormModal({
             </div>
           </div>
 
-          <IconPicker value={icon} onChange={setIcon} label="Icon nhóm" />
+          <IconPicker
+            value={icon}
+            onChange={setIcon}
+            label={t("agents.categories.groupIconLabel", "Category icon")}
+          />
         </form>
 
         <div className="flex gap-3 px-6 py-4 border-t border-gray-700 shrink-0">
@@ -296,7 +332,7 @@ function CategoryFormModal({
             onClick={onClose}
             className="flex-1 py-2 text-sm text-gray-400 hover:text-gray-200 border border-gray-700 rounded-lg transition-colors"
           >
-            Hủy
+            {t("common.cancel", "Cancel")}
           </button>
           <button
             type="button"
@@ -304,7 +340,11 @@ function CategoryFormModal({
             disabled={saving}
             className="flex-1 py-2 text-sm font-medium bg-accent hover:bg-accent-hover disabled:opacity-50 text-white rounded-lg transition-colors"
           >
-            {saving ? "Đang lưu..." : initial ? "Cập nhật" : "Tạo nhóm"}
+            {saving
+              ? t("agents.form.saving", "Saving…")
+              : initial
+                ? t("agents.form.updateAgent", "Update")
+                : t("agents.categories.createGroup", "Create category")}
           </button>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { CheckIcon, ChevronDownIcon, Squares2X2Icon } from "@heroicons/react/24/
 import type { AgentCategory } from "@/lib/types";
 import { AgentIcon } from "@/components/agents/AgentIcon";
 import { categoryBadgeClass } from "@/components/agents/CategoryBadge";
+import { useI18n } from "@/contexts/I18nContext";
 import { FLOW_UNCATEGORIZED } from "./flowAgentPalette";
 
 interface FlowCategoryFilterProps {
@@ -25,7 +26,7 @@ function TriggerLabel({
     return (
       <span className="inline-flex items-center gap-2 text-[11px] text-muted">
         <Squares2X2Icon className="w-3.5 h-3.5 shrink-0" />
-        <span className="truncate">{label ?? "Tất cả nhóm"}</span>
+        <span className="truncate">{label}</span>
       </span>
     );
   }
@@ -91,6 +92,7 @@ export function FlowCategoryFilter({
   onSelect,
   showUncategorized = false,
 }: FlowCategoryFilterProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -122,6 +124,9 @@ export function FlowCategoryFilter({
     setOpen(false);
   };
 
+  const allGroupsLabel = t("flows.categoryFilter.allGroups", "All categories");
+  const uncategorizedLabel = t("flows.categoryFilter.uncategorized", "Uncategorized");
+
   return (
     <div ref={rootRef} className="relative w-full">
       <button
@@ -129,15 +134,15 @@ export function FlowCategoryFilter({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label="Lọc agents theo nhóm phân loại"
+        aria-label={t("flows.categoryFilter.ariaLabel", "Filter agents by category")}
         className={`w-full flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg border border-border bg-input-bg text-left transition-colors focus:outline-none ${
           open ? "text-foreground" : "text-muted hover:text-foreground"
         }`}
       >
         {selectedId === FLOW_UNCATEGORIZED ? (
-          <span className="text-[11px] text-foreground">Chưa phân loại</span>
+          <span className="text-[11px] text-foreground">{uncategorizedLabel}</span>
         ) : (
-          <TriggerLabel category={selected} />
+          <TriggerLabel category={selected} label={allGroupsLabel} />
         )}
         <ChevronDownIcon
           className={`w-3.5 h-3.5 shrink-0 transition-transform text-muted ${open ? "rotate-180" : ""}`}
@@ -148,11 +153,11 @@ export function FlowCategoryFilter({
       {open && (
         <div
           role="listbox"
-          aria-label="Nhóm phân loại"
+          aria-label={t("flows.categoryFilter.listAria", "Categories")}
           className="absolute z-50 top-[calc(100%+4px)] left-0 right-0 py-1.5 bg-surface border border-border rounded-xl shadow-2xl max-h-64 overflow-y-auto flow-scrollbar"
         >
           <p className="px-3 pb-1 text-[9px] font-medium uppercase tracking-wider text-muted">
-            Nhóm phân loại
+            {t("flows.categoryFilter.title", "Categories")}
           </p>
 
           <MenuOption selected={selectedId === null} onClick={() => pick(null)}>
@@ -160,7 +165,7 @@ export function FlowCategoryFilter({
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-surface-muted text-muted border border-border">
                 <Squares2X2Icon className="w-3.5 h-3.5" />
               </span>
-              <span className="text-[11px] font-medium">Tất cả nhóm</span>
+              <span className="text-[11px] font-medium">{allGroupsLabel}</span>
             </span>
           </MenuOption>
 
@@ -189,7 +194,7 @@ export function FlowCategoryFilter({
                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-surface-muted text-muted border border-border">
                     <span className="text-[10px] font-bold">?</span>
                   </span>
-                  <span className="text-[11px] font-medium text-foreground">Chưa phân loại</span>
+                  <span className="text-[11px] font-medium text-foreground">{uncategorizedLabel}</span>
                 </span>
               </MenuOption>
             </>

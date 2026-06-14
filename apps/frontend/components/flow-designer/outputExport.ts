@@ -1,10 +1,9 @@
 export type OutputFileFormat = "auto" | "txt" | "json" | "md" | "html" | "csv";
 
-const PLACEHOLDER = "Hệ thống đang đợi tín hiệu...";
+export const EXPORT_FORMAT_VALUES: OutputFileFormat[] = ["auto", "txt", "json", "md", "html", "csv"];
 
 export function isExportableOutput(value?: string): boolean {
-  if (!value?.trim()) return false;
-  return value.trim() !== PLACEHOLDER;
+  return Boolean(value?.trim());
 }
 
 export function detectOutputFormat(content: string): OutputFileFormat {
@@ -133,12 +132,3 @@ export async function copyOutputToClipboard(content: string): Promise<boolean> {
     return false;
   }
 }
-
-export const EXPORT_FORMAT_OPTIONS: { value: OutputFileFormat; label: string; ext: string }[] = [
-  { value: "auto", label: "Tự động", ext: "auto" },
-  { value: "txt", label: "Text", ext: "txt" },
-  { value: "json", label: "JSON", ext: "json" },
-  { value: "md", label: "Markdown", ext: "md" },
-  { value: "html", label: "HTML", ext: "html" },
-  { value: "csv", label: "CSV", ext: "csv" },
-];

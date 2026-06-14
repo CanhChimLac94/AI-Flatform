@@ -3,16 +3,16 @@ import type { FlowIconKey } from "./flowIcons";
 
 export const FLOW_TEMPLATES: {
   id: string;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
   icon: FlowIconKey;
   nodes: Node[];
   edges: Edge[];
 }[] = [
   {
     id: "software-dev",
-    label: "Software Development",
-    description: "Quy trình từ đặc tả đến kiểm thử QA.",
+    labelKey: "flows.templates.softwareDev.label",
+    descriptionKey: "flows.templates.softwareDev.description",
     icon: "terminal",
     nodes: [
       { id: "start-1", type: "start", position: { x: 50, y: 150 }, data: { label: "Yêu cầu PM", value: "Dự án: App giao hàng nhanh" } },
@@ -31,8 +31,8 @@ export const FLOW_TEMPLATES: {
   },
   {
     id: "content-strategy",
-    label: "Content Marketing",
-    description: "Nghiên cứu chủ đề và sản xuất nội dung đa kênh.",
+    labelKey: "flows.templates.contentStrategy.label",
+    descriptionKey: "flows.templates.contentStrategy.description",
     icon: "document-text",
     nodes: [
       { id: "start-1", type: "start", position: { x: 50, y: 150 }, data: { label: "Chủ đề gốc", value: "Chủ đề: Tương lai của AI trong năm 2025" } },

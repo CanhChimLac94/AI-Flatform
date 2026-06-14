@@ -5,16 +5,19 @@ import { AgentIcon } from "@/components/agents/AgentIcon";
 import { categoryBadgeClass } from "@/components/agents/CategoryBadge";
 import { FlowAgentDraggableItem } from "./FlowAgentDraggableItem";
 import type { FlowAgentCategoryGroup } from "./flowAgentPalette";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface FlowAgentCategorySectionProps {
   group: FlowAgentCategoryGroup;
 }
 
 function CategoryGroupLabel({ category }: { category: AgentCategory | null }) {
+  const { t } = useI18n();
+
   if (!category) {
     return (
       <p className="text-[8px] font-bold text-muted uppercase tracking-widest px-1">
-        Chưa phân loại
+        {t("flows.categoryFilter.uncategorized", "Uncategorized")}
       </p>
     );
   }

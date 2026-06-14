@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { GroupedModelSelect } from '@/components/common/GroupedModelSelect';
-import { useModelCatalog } from '@/hooks/useModelCatalog';
+import { useChatModelCatalog } from '@/hooks/useChatModelCatalog';
 import { useI18n } from '@/contexts/I18nContext';
 
 interface ProviderModelSelectorProps {
@@ -21,7 +21,7 @@ export const ProviderModelSelector: React.FC<ProviderModelSelectorProps> = ({
   disabled = false,
 }) => {
   const { t } = useI18n();
-  const { groups: modelGroups, loading } = useModelCatalog();
+  const { groups: modelGroups, loading } = useChatModelCatalog();
 
   const handleModelChange = (modelId: string, provider?: string) => {
     if (provider) onProviderChange(provider);

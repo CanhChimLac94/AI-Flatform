@@ -6,6 +6,7 @@ import {
   getAgentIconComponent,
   type AgentIconKey,
 } from "@/lib/agentIcons";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface IconPickerProps {
   value: string | null;
@@ -13,17 +14,22 @@ interface IconPickerProps {
   label?: string;
 }
 
-export function IconPicker({ value, onChange, label = "Icon" }: IconPickerProps) {
+export function IconPicker({ value, onChange, label }: IconPickerProps) {
+  const { t } = useI18n();
   const selected = value as AgentIconKey | null;
+  const displayLabel = label ?? t("agents.iconPicker.label", "Icon");
+  const selectedOption = value
+    ? AGENT_ICON_OPTIONS.find((o) => o.key === value)
+    : null;
 
   return (
     <div>
-      <label className="block text-xs text-gray-400 mb-1.5">{label}</label>
+      <label className="block text-xs text-gray-400 mb-1.5">{displayLabel}</label>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => onChange(null)}
-          title="Mặc định hệ thống"
+          title={t("agents.iconPicker.autoTitle", "System default")}
           className={`flex flex-col items-center justify-center gap-1 w-14 h-14 rounded-xl border text-[10px] transition-colors ${
             value === null
               ? "bg-accent/20 border-accent text-white"
@@ -31,7 +37,7 @@ export function IconPicker({ value, onChange, label = "Icon" }: IconPickerProps)
           }`}
         >
           <SparklesIcon className="w-5 h-5 opacity-70" />
-          Auto
+          {t("agents.iconPicker.auto", "Auto")}
         </button>
         {AGENT_ICON_OPTIONS.map((opt) => {
           const Icon = getAgentIconComponent(opt.key);
@@ -55,7 +61,9 @@ export function IconPicker({ value, onChange, label = "Icon" }: IconPickerProps)
         })}
       </div>
       <p className="text-[11px] text-gray-500 mt-1.5">
-        {value ? `Đã chọn: ${AGENT_ICON_OPTIONS.find((o) => o.key === value)?.label ?? value}` : "Hệ thống tự chọn icon theo nhóm hoặc tên agent"}
+        {selectedOption
+          ? t("agents.iconPicker.selected", "Selected: {name}", { name: selectedOption.label })
+          : t("agents.iconPicker.autoHint", "System picks an icon from category or agent name")}
       </p>
     </div>
   );

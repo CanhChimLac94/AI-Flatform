@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface FlowMetaEditorProps {
   name: string;
@@ -27,6 +28,7 @@ export function FlowMetaEditor({
   autoFocusName = false,
   status,
 }: FlowMetaEditorProps) {
+  const { t } = useI18n();
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export function FlowMetaEditor({
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
           disabled={disabled}
-          placeholder="Tên flow"
+          placeholder={t("flows.meta.namePlaceholder", "Flow name")}
           className="min-w-[7rem] max-w-[10rem] sm:max-w-[14rem] flex-1 px-2.5 py-1.5 rounded-lg bg-input-bg border border-border text-foreground text-[11px] sm:text-xs font-medium placeholder:text-muted outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 disabled:opacity-50"
         />
         <button
@@ -53,7 +55,11 @@ export function FlowMetaEditor({
           onClick={() => onExpandedChange(!expanded)}
           disabled={disabled}
           className="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-input-bg border border-border text-muted hover:text-foreground hover:bg-surface-hover transition-colors disabled:opacity-50"
-          title={expanded ? "Thu gọn mô tả" : "Sửa mô tả"}
+          title={
+            expanded
+              ? t("flows.meta.collapseDescription", "Collapse description")
+              : t("flows.meta.expandDescription", "Edit description")
+          }
           aria-expanded={expanded}
         >
           {expanded ? (
@@ -71,7 +77,7 @@ export function FlowMetaEditor({
           onChange={(e) => onDescriptionChange(e.target.value)}
           disabled={disabled}
           rows={2}
-          placeholder="Mô tả ngắn về mục đích của flow..."
+          placeholder={t("flows.meta.descriptionPlaceholder", "Brief description of this flow…")}
           className="w-full px-2.5 py-2 rounded-lg bg-input-bg border border-border text-foreground text-[11px] sm:text-xs placeholder:text-muted outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 resize-none disabled:opacity-50"
         />
       )}

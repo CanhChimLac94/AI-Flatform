@@ -5,10 +5,11 @@ import { XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import type { AgentFlowSummary, FlowRun } from "@/lib/types";
 import { listFlowRuns, runFlowNow } from "@/lib/api";
 import { useHasMounted } from "@/hooks/useHasMounted";
+import { useI18n } from "@/contexts/I18nContext";
 
-function formatWhen(iso: string): string {
+function formatWhen(iso: string, locale: string): string {
   try {
-    return new Date(iso).toLocaleString("vi-VN", {
+    return new Date(iso).toLocaleString(locale === "vi" ? "vi-VN" : "en-US", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -39,12 +40,6 @@ function extractOutputs(run: FlowRun): { label: string; value: string }[] {
   return [];
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  success: "Thành công",
-  failed: "Thất bại",
-  running: "Đang chạy",
-};
-
 const STATUS_CLASS: Record<string, string> = {
   success: "text-emerald-400 bg-emerald-900/20 border-emerald-800/40",
   failed: "text-red-400 bg-red-900/20 border-red-800/40",
@@ -59,12 +54,22 @@ interface Props {
 }
 
 export function FlowRunResultsModal({ flow, highlightRunId, onClose, onRan }: Props) {
+  const { t, locale } = useI18n();
   const mounted = useHasMounted();
   const [runs, setRuns] = useState<FlowRun[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(highlightRunId ?? null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const statusLabel = (status: string) => {
+    const map: Record<string, string> = {
+      success: t("flows.status.success", "Success"),
+      failed: t("flows.status.failed", "Failed"),
+      running: t("flows.status.running", "Running"),
+    };
+    return map[status] ?? status;
+  };
 
   const loadRuns = useCallback(async () => {
     setLoading(true);
@@ -77,11 +82,11 @@ export function FlowRunResultsModal({ flow, highlightRunId, onClose, onRan }: Pr
         return list[0]?.id ?? null;
       });
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Không tải được lịch sử chạy");
+      setError(e instanceof Error ? e.message : t("flows.errors.loadRunsFailed", "Failed to load run history"));
     } finally {
       setLoading(false);
     }
-  }, [flow.id]);
+  }, [flow.id, t]);
 
   useEffect(() => {
     void loadRuns();
@@ -102,7 +107,7 @@ export function FlowRunResultsModal({ flow, highlightRunId, onClose, onRan }: Pr
       setSelectedId(run.id);
       onRan?.();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Chạy flow thất bại");
+      setError(e instanceof Error ? e.message : t("flows.errors.runFailed", "Failed to run flow"));
     } finally {
       setRunning(false);
     }
@@ -115,7 +120,9 @@ export function FlowRunResultsModal({ flow, highlightRunId, onClose, onRan }: Pr
       <div className="w-full max-w-2xl bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800 shrink-0">
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-white">Kết quả chạy flow</h2>
+            <h2 className="text-sm font-semibold text-white">
+              {t("flows.resultsModal.title", "Flow run results")}
+            </h2>
             <p className="text-xs text-gray-500 mt-0.5 truncate">{flow.name}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -126,9 +133,14 @@ export function FlowRunResultsModal({ flow, highlightRunId, onClose, onRan }: Pr
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-300 border border-emerald-700/50 hover:border-emerald-500 rounded-lg disabled:opacity-50"
             >
               <ArrowPathIcon className={`w-4 h-4 ${running ? "animate-spin" : ""}`} />
-              {running ? "Đang chạy..." : "Chạy ngay"}
+              {running ? t("flows.running", "Running…") : t("flows.runNow", "Run now")}
             </button>
-            <button type="button" onClick={onClose} className="p-1.5 text-gray-500 hover:text-white rounded-lg hover:bg-gray-800">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 text-gray-500 hover:text-white rounded-lg hover:bg-gray-800"
+              aria-label={t("common.close", "Close")}
+            >
               <XMarkIcon className="w-5 h-5" />
             </button>
           </div>
@@ -137,9 +149,11 @@ export function FlowRunResultsModal({ flow, highlightRunId, onClose, onRan }: Pr
         <div className="flex flex-1 min-h-0 flex-col sm:flex-row">
           <div className="sm:w-48 border-b sm:border-b-0 sm:border-r border-gray-800 overflow-y-auto shrink-0 max-h-40 sm:max-h-none">
             {loading ? (
-              <p className="p-4 text-xs text-gray-500">Đang tải...</p>
+              <p className="p-4 text-xs text-gray-500">{t("common.loading", "Loading...")}</p>
             ) : runs.length === 0 ? (
-              <p className="p-4 text-xs text-gray-500">Chưa có lần chạy nào.</p>
+              <p className="p-4 text-xs text-gray-500">
+                {t("flows.resultsModal.noRuns", "No runs yet.")}
+              </p>
             ) : (
               <ul className="py-2">
                 {runs.map((run) => (
@@ -154,13 +168,15 @@ export function FlowRunResultsModal({ flow, highlightRunId, onClose, onRan }: Pr
                       }`}
                     >
                       <span className={`inline-block px-1.5 py-0.5 rounded border text-[10px] font-medium mb-1 ${STATUS_CLASS[run.status] ?? "text-gray-400"}`}>
-                        {STATUS_LABEL[run.status] ?? run.status}
+                        {statusLabel(run.status)}
                       </span>
                       <span className="block" suppressHydrationWarning>
-                        {mounted ? formatWhen(run.started_at) : "—"}
+                        {mounted ? formatWhen(run.started_at, locale) : "—"}
                       </span>
                       <span className="block text-[10px] text-gray-600 mt-0.5">
-                        {run.trigger === "manual" ? "Thủ công" : "Lịch"}
+                        {run.trigger === "manual"
+                          ? t("flows.trigger.manual", "Manual")
+                          : t("flows.trigger.schedule", "Scheduled")}
                       </span>
                     </button>
                   </li>
@@ -178,17 +194,19 @@ export function FlowRunResultsModal({ flow, highlightRunId, onClose, onRan }: Pr
 
             {!selected && !loading ? (
               <p className="text-sm text-gray-500 text-center py-8">
-                Chưa có kết quả. Bấm &quot;Chạy ngay&quot; để thực thi flow.
+                {t("flows.resultsModal.emptyHint", "No results yet. Click \"Run now\" to execute the flow.")}
               </p>
             ) : selected ? (
               <div className="flex flex-col gap-4">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <span className={`px-2 py-0.5 rounded-full border ${STATUS_CLASS[selected.status] ?? ""}`}>
-                    {STATUS_LABEL[selected.status] ?? selected.status}
+                    {statusLabel(selected.status)}
                   </span>
                   {selected.finished_at && mounted && (
                     <span className="text-gray-500" suppressHydrationWarning>
-                      Hoàn tất: {formatWhen(selected.finished_at)}
+                      {t("flows.resultsModal.finishedAt", "Finished: {time}", {
+                        time: formatWhen(selected.finished_at, locale),
+                      })}
                     </span>
                   )}
                 </div>
@@ -200,14 +218,16 @@ export function FlowRunResultsModal({ flow, highlightRunId, onClose, onRan }: Pr
                 )}
 
                 {selected.status === "success" && outputItems.length === 0 && (
-                  <p className="text-sm text-gray-500">Flow chạy xong nhưng không có output node.</p>
+                  <p className="text-sm text-gray-500">
+                    {t("flows.resultsModal.noOutputs", "Flow completed but has no output nodes.")}
+                  </p>
                 )}
 
                 {outputItems.map(({ label, value }) => (
                   <div key={label} className="flex flex-col gap-1.5">
                     <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</h3>
                     <pre className="text-xs text-green-200/90 bg-black/40 border border-gray-700 rounded-xl p-3 whitespace-pre-wrap break-words font-mono max-h-64 overflow-y-auto">
-                      {value || "(trống)"}
+                      {value || t("flows.resultsModal.emptyOutput", "(empty)")}
                     </pre>
                   </div>
                 ))}

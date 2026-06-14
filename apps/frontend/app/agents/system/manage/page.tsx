@@ -11,6 +11,7 @@ import { SystemAgentCard } from "@/components/agents/SystemAgentCard";
 import { SystemAgentForm } from "@/components/agents/SystemAgentForm";
 import { CategoryManager } from "@/components/agents/CategoryManager";
 import { useAuth } from "@/contexts/AuthContext";
+import { useI18n } from "@/contexts/I18nContext";
 import type {
   AgentCategory,
   SystemAgent,
@@ -28,14 +29,15 @@ import {
 type FormMode = { type: "create" } | { type: "edit"; agent: SystemAgent } | null;
 type ManageTab = "agents" | "categories";
 
-const TABS: { id: ManageTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: "agents", label: "Agents", icon: CpuChipIcon },
-  { id: "categories", label: "Nhóm phân loại", icon: FolderIcon },
+const TABS: { id: ManageTab; labelKey: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: "agents", labelKey: "agents.systemManage.tabAgents", icon: CpuChipIcon },
+  { id: "categories", labelKey: "agents.categoriesTab", icon: FolderIcon },
 ];
 
 export default function SystemAgentsManagePage() {
   const router = useRouter();
   const { isAuthReady, isAdmin } = useAuth();
+  const { t } = useI18n();
   const [categories, setCategories] = useState<AgentCategory[]>([]);
   const [agents, setAgents] = useState<SystemAgent[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -62,11 +64,11 @@ export default function SystemAgentsManagePage() {
       setCategories(cats);
       setAgents(list);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Tải dữ liệu thất bại");
+      setError(e instanceof Error ? e.message : t("agents.systemManage.loadFailed", "Failed to load data"));
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory]);
+  }, [selectedCategory, t]);
 
   useEffect(() => {
     if (isAdmin) load();
@@ -88,7 +90,7 @@ export default function SystemAgentsManagePage() {
       await deleteSystemAgent(agent.id);
       setAgents((prev) => prev.filter((a) => a.id !== agent.id));
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Xóa thất bại");
+      setError(e instanceof Error ? e.message : t("errors.deleteFailed", "Delete failed"));
     } finally {
       setDeleteConfirm(null);
     }
@@ -98,7 +100,7 @@ export default function SystemAgentsManagePage() {
     return (
       <AppShell>
         <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">
-          Đang kiểm tra quyền...
+          {t("agents.checkingPermission", "Checking permissions…")}
         </div>
       </AppShell>
     );
@@ -109,10 +111,10 @@ export default function SystemAgentsManagePage() {
       <PageHeader
         icon={ServerStackIcon}
         iconClassName="text-emerald-400"
-        title="Quản lý agents hệ thống"
+        title={t("agents.manageTitle", "Manage system agents")}
         badge={
           <span className="text-xs bg-emerald-900/30 text-emerald-400 border border-emerald-800/50 px-2 py-0.5 rounded-full">
-            Admin
+            {t("agents.admin", "Admin")}
           </span>
         }
         center={
@@ -129,19 +131,19 @@ export default function SystemAgentsManagePage() {
             <Link
               href="/agents/system"
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-gray-600 hover:border-gray-400 text-gray-300 hover:text-white text-xs font-medium rounded-lg transition-colors"
-              title="Thư viện"
+              title={t("agents.library", "Library")}
             >
               <ArrowLeftIcon className="w-4 h-4" />
-              <span className="hidden sm:inline">Thư viện</span>
+              <span className="hidden sm:inline">{t("agents.library", "Library")}</span>
             </Link>
             {activeTab === "agents" && (
               <button
                 onClick={() => setFormMode({ type: "create" })}
                 className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors"
-                title="Agent mới"
+                title={t("agents.newSystemAgent", "New agent")}
               >
                 <PlusIcon className="w-4 h-4" />
-                <span className="hidden sm:inline">Agent mới</span>
+                <span className="hidden sm:inline">{t("agents.newSystemAgent", "New agent")}</span>
               </button>
             )}
           </div>
@@ -151,10 +153,10 @@ export default function SystemAgentsManagePage() {
       <div className="shrink-0 border-b border-gray-700 px-4 sm:px-6">
         <div
           role="tablist"
-          aria-label="Quản lý agents hệ thống"
+          aria-label={t("agents.systemManage.tabsAria", "Manage system agents")}
           className="flex gap-1 -mb-px overflow-x-auto"
         >
-          {TABS.map(({ id, label, icon: TabIcon }) => {
+          {TABS.map(({ id, labelKey, icon: TabIcon }) => {
             const selected = activeTab === id;
             return (
               <button
@@ -170,7 +172,7 @@ export default function SystemAgentsManagePage() {
                 }`}
               >
                 <TabIcon className="w-4 h-4 shrink-0" />
-                {label}
+                {t(labelKey, id === "agents" ? "Agents" : "Categories")}
               </button>
             );
           })}
@@ -195,14 +197,16 @@ export default function SystemAgentsManagePage() {
             ) : agents.length === 0 ? (
               <div className="text-center py-16 flex flex-col items-center gap-3">
                 <CpuChipIcon className="w-12 h-12 text-gray-600" />
-                <p className="text-gray-400 text-sm">Chưa có agent trong nhóm này.</p>
+                <p className="text-gray-400 text-sm">
+                  {t("agents.systemManage.emptyInCategory", "No agents in this category.")}
+                </p>
                 <button
                   type="button"
                   onClick={() => setFormMode({ type: "create" })}
                   className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg transition-colors"
                 >
                   <PlusIcon className="w-4 h-4" />
-                  Tạo agent đầu tiên
+                  {t("agents.systemManage.createFirstInCategory", "Create first agent")}
                 </button>
               </div>
             ) : (
@@ -236,22 +240,26 @@ export default function SystemAgentsManagePage() {
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
           <div className="w-full max-w-sm bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-6">
-            <h2 className="text-base font-semibold text-white mb-2">Xóa agent hệ thống?</h2>
+            <h2 className="text-base font-semibold text-white mb-2">
+              {t("agents.systemManage.deleteTitle", "Delete system agent?")}
+            </h2>
             <p className="text-sm text-gray-400 mb-6">
-              <span className="text-white font-medium">{deleteConfirm.name}</span> sẽ bị xóa khỏi thư viện chung.
+              {t("agents.systemManage.deleteBody", "{name} will be removed from the shared library.", {
+                name: deleteConfirm.name,
+              })}
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => handleDelete(deleteConfirm)}
                 className="flex-1 py-2 text-sm font-medium bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors"
               >
-                Xóa
+                {t("common.delete", "Delete")}
               </button>
               <button
                 onClick={() => setDeleteConfirm(null)}
                 className="px-4 py-2 text-sm text-gray-400 hover:text-gray-200 border border-gray-700 rounded-lg transition-colors"
               >
-                Hủy
+                {t("common.cancel", "Cancel")}
               </button>
             </div>
           </div>

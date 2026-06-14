@@ -520,7 +520,7 @@ export const PROVIDERS: ProviderConfig[] = [
 export const PROVIDER_KEY_URLS: Record<string, string> = {
   groq:       "https://console.groq.com/keys",
   openrouter: "https://openrouter.ai/settings/keys",
-  nvidia:     "https://build.nvidia.com/",
+  nvidia:     "https://build.nvidia.com/settings/api-keys",
   openai:     "https://platform.openai.com/api-keys",
   anthropic:  "https://console.anthropic.com/settings/keys",
   google:     "https://aistudio.google.com/app/apikey",
@@ -535,12 +535,30 @@ export interface StoredKeyInfo {
   masked_key: string;
 }
 
+export type ProviderKeyStatusCode =
+  | "chat_ready"
+  | "no_key"
+  | "no_active_key"
+  | "key_not_usable"
+  | "no_enabled_models"
+  | "unavailable";
+
+export interface ProviderChannelStatus {
+  chat_ready: boolean;
+  has_stored_keys: boolean;
+  has_active_key: boolean;
+  key_usable: boolean;
+  enabled_models_count: number;
+  status_code: ProviderKeyStatusCode;
+}
+
 export interface ProviderKeyGroup {
   provider: string;
   name: string;
   is_set: boolean;
   using_system_key: boolean;
   keys: StoredKeyInfo[];
+  channel_status: ProviderChannelStatus;
 }
 
 // ── Guest settings (stored in localStorage) ──────────────────────────────────

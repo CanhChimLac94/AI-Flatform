@@ -12,7 +12,7 @@ import {
 } from "@heroicons/react/24/outline";
 import type { Agent, SystemAgent } from "@/lib/types";
 import { GroupedModelSelect } from "@/components/common/GroupedModelSelect";
-import { useModelCatalog } from "@/hooks/useModelCatalog";
+import { useChatModelCatalog } from "@/hooks/useChatModelCatalog";
 import { getProviderVisual } from "@/lib/providerVisuals";
 import { AgentIcon } from "@/components/agents/AgentIcon";
 import { useI18n } from "@/contexts/I18nContext";
@@ -67,7 +67,7 @@ export function ChatOptionsMenu({
 }: ChatOptionsMenuProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
-  const { groups: modelGroups, loading: loadingCatalog } = useModelCatalog();
+  const { groups: modelGroups, loading: loadingCatalog } = useChatModelCatalog();
   const rootRef = useRef<HTMLDivElement>(null);
 
   const allAgents = [
@@ -191,17 +191,26 @@ export function ChatOptionsMenu({
           </MenuSection>
 
           <MenuSection title={t("chat.model")}>
-            <GroupedModelSelect
-              groups={modelGroups}
-              value={selectedModel}
-              valueProvider={selectedProvider}
-              onChange={handleModelChange}
-              allowEmpty={false}
-              emptyOption={t("common.loading", "Loading...")}
-              loading={loadingCatalog}
-              disabled={disabled}
-              className="w-full px-2.5 py-2 text-sm bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50"
-            />
+            {!loadingCatalog && modelGroups.length === 0 ? (
+              <p className="text-xs text-gray-500 px-1 py-1">
+                {t(
+                  "chat.options.noConfiguredModels",
+                  "No channels ready for chat. Add API keys and enable models in Settings.",
+                )}
+              </p>
+            ) : (
+              <GroupedModelSelect
+                groups={modelGroups}
+                value={selectedModel}
+                valueProvider={selectedProvider}
+                onChange={handleModelChange}
+                allowEmpty={false}
+                emptyOption={t("common.loading", "Loading...")}
+                loading={loadingCatalog}
+                disabled={disabled}
+                className="w-full px-2.5 py-2 text-sm bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50"
+              />
+            )}
           </MenuSection>
 
           {allAgents.length > 0 && (

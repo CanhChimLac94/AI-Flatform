@@ -437,8 +437,9 @@ export async function fetchProviderModels(provider: string): Promise<string[]> {
   return request<string[]>(`/settings/providers/${provider}/models`);
 }
 
-export async function listModelCatalog(): Promise<ProviderModelGroup[]> {
-  return request<ProviderModelGroup[]>("/settings/models/catalog");
+export async function listModelCatalog(options?: { requireKeys?: boolean }): Promise<ProviderModelGroup[]> {
+  const qs = options?.requireKeys ? "?require_keys=true" : "";
+  return request<ProviderModelGroup[]>(`/settings/models/catalog${qs}`);
 }
 
 export async function listProviderModelGroups(): Promise<ProviderModelGroup[]> {

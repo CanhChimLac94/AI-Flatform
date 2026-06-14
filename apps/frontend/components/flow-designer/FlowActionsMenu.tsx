@@ -98,11 +98,7 @@ export function FlowActionsMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={t("flows.menuSettings")}
-        className={`flex items-center justify-center w-9 h-9 rounded-xl border transition-colors ${
-          open
-            ? "bg-input-bg border-border text-foreground"
-            : "bg-input-bg border-border text-muted hover:text-foreground hover:bg-surface-hover"
-        }`}
+        className={`flex items-center justify-center w-9 h-9 rounded-xl transition-colors`}
       >
         <EllipsisVerticalIcon className="w-5 h-5" />
       </button>

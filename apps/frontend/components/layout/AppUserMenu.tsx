@@ -136,13 +136,9 @@ export function AppUserMenu({ variant = "inline" }: AppUserMenuProps) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={t("layout.userMenu.ariaLabel")}
-        className={`inline-flex items-center justify-center rounded-xl border p-1.5 transition-colors shadow-lg shadow-black/10 ${
-          open
-            ? "bg-surface-elevated border-border text-foreground"
-            : "bg-surface border-border text-muted hover:text-foreground hover:bg-surface-hover"
-        }`}
+        className={`inline-flex items-center justify-center rounded-xl p-1.5 transition-colors`}
       >
-        <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-surface-muted border border-border shrink-0">
+        <span className="flex items-center justify-center w-7 h-7 rounded-lg shrink-0">
           <UserCircleIcon className="w-5 h-5 text-blue-400" />
         </span>
       </button>

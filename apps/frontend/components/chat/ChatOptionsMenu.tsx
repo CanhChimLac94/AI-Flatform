@@ -11,7 +11,8 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import type { Agent, SystemAgent } from "@/lib/types";
-import { listProviders, fetchProviderModels } from "@/lib/api";
+import { GroupedModelSelect } from "@/components/common/GroupedModelSelect";
+import { useModelCatalog } from "@/hooks/useModelCatalog";
 import { getProviderVisual } from "@/lib/providerVisuals";
 import { AgentIcon } from "@/components/agents/AgentIcon";
 import { useI18n } from "@/contexts/I18nContext";
@@ -66,10 +67,7 @@ export function ChatOptionsMenu({
 }: ChatOptionsMenuProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
-  const [providers, setProviders] = useState<{ id: string; name: string; default_model?: string }[]>([]);
-  const [models, setModels] = useState<string[]>([]);
-  const [loadingProviders, setLoadingProviders] = useState(false);
-  const [loadingModels, setLoadingModels] = useState(false);
+  const { groups: modelGroups, loading: loadingCatalog } = useModelCatalog();
   const rootRef = useRef<HTMLDivElement>(null);
 
   const allAgents = [
@@ -84,52 +82,29 @@ export function ChatOptionsMenu({
   const close = () => setOpen(false);
 
   useEffect(() => {
-    let cancelled = false;
-    setLoadingProviders(true);
-    listProviders()
-      .then((data) => {
-        if (cancelled) return;
-        setProviders(data);
-        if (!selectedProvider && data.length > 0) {
-          onProviderChange(data[0].id);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setProviders([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingProviders(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedProvider, onProviderChange]);
+    if (loadingCatalog || modelGroups.length === 0) return;
 
-  useEffect(() => {
-    if (!selectedProvider) {
-      setModels([]);
-      return;
-    }
-    let cancelled = false;
-    setLoadingModels(true);
-    fetchProviderModels(selectedProvider)
-      .then((data) => {
-        if (cancelled) return;
-        setModels(data);
-        if (data.length > 0 && (!selectedModel || !data.includes(selectedModel))) {
-          onModelChange(data[0]);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setModels([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingModels(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedProvider, selectedModel, onModelChange]);
+    const isValid = modelGroups.some(
+      (g) =>
+        g.provider === selectedProvider &&
+        g.models.some((m) => m.model_id === selectedModel),
+    );
+    if (isValid) return;
+
+    const firstGroup = modelGroups[0];
+    const firstModel = firstGroup?.models[0];
+    if (!firstGroup || !firstModel) return;
+
+    onProviderChange(firstGroup.provider);
+    onModelChange(firstModel.model_id);
+  }, [
+    loadingCatalog,
+    modelGroups,
+    selectedProvider,
+    selectedModel,
+    onProviderChange,
+    onModelChange,
+  ]);
 
   useEffect(() => {
     if (!open) return;
@@ -149,12 +124,9 @@ export function ChatOptionsMenu({
     };
   }, [open]);
 
-  const handleProviderChange = (providerId: string) => {
-    onProviderChange(providerId);
-    const provider = providers.find((p) => p.id === providerId);
-    if (provider?.default_model) {
-      onModelChange(provider.default_model);
-    }
+  const handleModelChange = (modelId: string, provider?: string) => {
+    if (provider) onProviderChange(provider);
+    onModelChange(modelId);
   };
 
   const triggerLabel = [
@@ -218,43 +190,18 @@ export function ChatOptionsMenu({
             </div>
           </MenuSection>
 
-          <MenuSection title={t("chat.options.channel")}>
-            <select
-              value={selectedProvider}
-              onChange={(e) => handleProviderChange(e.target.value)}
-              disabled={disabled || loadingProviders || providers.length === 0}
-              className="w-full px-2.5 py-2 text-sm bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50"
-            >
-              <option value="">
-                {loadingProviders ? t("common.loading", "Loading...") : t("chat.selectProvider", "Select Provider")}
-              </option>
-              {providers.map((provider) => {
-                const visual = getProviderVisual(provider.id, provider.name);
-                return (
-                  <option key={provider.id} value={provider.id}>
-                    {visual.name}
-                  </option>
-                );
-              })}
-            </select>
-          </MenuSection>
-
           <MenuSection title={t("chat.model")}>
-            <select
+            <GroupedModelSelect
+              groups={modelGroups}
               value={selectedModel}
-              onChange={(e) => onModelChange(e.target.value)}
-              disabled={disabled || loadingModels || models.length === 0 || !selectedProvider}
+              valueProvider={selectedProvider}
+              onChange={handleModelChange}
+              allowEmpty={false}
+              emptyOption={t("common.loading", "Loading...")}
+              loading={loadingCatalog}
+              disabled={disabled}
               className="w-full px-2.5 py-2 text-sm bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50"
-            >
-              <option value="">
-                {loadingModels ? t("common.loading", "Loading...") : t("chat.selectModel", "Select Model")}
-              </option>
-              {models.map((model) => (
-                <option key={model} value={model}>
-                  {t(`models.${model}`, model)}
-                </option>
-              ))}
-            </select>
+            />
           </MenuSection>
 
           {allAgents.length > 0 && (

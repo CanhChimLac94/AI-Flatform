@@ -5,6 +5,7 @@ Seeds from provider_registry on first access; users can add custom models,
 rename entries, enable/disable, and delete custom models.
 """
 
+import uuid
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -90,3 +91,58 @@ async def enabled_model_ids(
 ) -> list[str]:
     rows = await ensure_provider_seeded(db, user_id, provider)
     return [r.model_id for r in rows if r.is_enabled]
+
+
+_CATALOG_NS = uuid.UUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+
+
+def _registry_catalog_groups() -> list[dict]:
+    """Static enabled catalog for guests (no display names)."""
+    groups: list[dict] = []
+    for provider in ALL_PROVIDERS:
+        info = REGISTRY.get(provider)
+        if not info:
+            continue
+        models = [
+            {
+                "id": uuid.uuid5(_CATALOG_NS, f"{provider}:{model_id}"),
+                "provider": provider,
+                "model_id": model_id,
+                "display_name": None,
+                "is_enabled": True,
+                "is_builtin": True,
+                "sort_order": idx,
+            }
+            for idx, model_id in enumerate(info["models"])
+        ]
+        if models:
+            groups.append(
+                {
+                    "provider": provider,
+                    "provider_name": info["name"],
+                    "models": models,
+                }
+            )
+    return groups
+
+
+async def list_enabled_catalog_groups(
+    db: AsyncSession, user_id: UUID | None
+) -> list[dict]:
+    """Enabled models grouped by provider for model pickers (chat, agents)."""
+    if user_id is None:
+        return _registry_catalog_groups()
+
+    groups = await list_provider_groups(db, user_id)
+    result: list[dict] = []
+    for group in groups:
+        enabled = [m for m in group["models"] if m.is_enabled]
+        if enabled:
+            result.append(
+                {
+                    "provider": group["provider"],
+                    "provider_name": group["provider_name"],
+                    "models": enabled,
+                }
+            )
+    return result

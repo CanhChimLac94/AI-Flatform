@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { DocumentArrowUpIcon, TrashIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import type { Agent, AgentCategory, AgentCreateRequest, AgentKnowledgeFile, AgentUpdateRequest } from "@/lib/types";
-import { PROVIDERS } from "@/lib/types";
 import { deleteKnowledgeFile, listKnowledgeFiles, uploadKnowledgeFile } from "@/lib/api";
+import { GroupedModelSelect } from "@/components/common/GroupedModelSelect";
+import { useModelCatalog } from "@/hooks/useModelCatalog";
 import { IconPicker } from "./IconPicker";
 import { AgentIcon } from "./AgentIcon";
 import { categoryBadgeClass } from "./CategoryBadge";
@@ -44,6 +45,7 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
   const [knowledgeFiles, setKnowledgeFiles] = useState<AgentKnowledgeFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const { groups: modelGroups, loading: loadingModels } = useModelCatalog();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -114,9 +116,6 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
       setUploadError("Failed to delete file");
     }
   };
-
-  // Flat list of all available models from all providers
-  const allModels = PROVIDERS.flatMap((p) => p.models.map((m) => ({ label: `${p.name} — ${m}`, value: m })));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
@@ -199,16 +198,14 @@ export function AgentForm({ initial, categories = [], onSubmit, onCancel }: Prop
 
           <div>
             <label className="block text-xs text-gray-400 mb-1.5">Model override <span className="text-gray-600">(optional)</span></label>
-            <select
+            <GroupedModelSelect
+              groups={modelGroups}
               value={model}
-              onChange={(e) => setModel(e.target.value)}
+              onChange={(modelId) => setModel(modelId)}
+              emptyOption={loadingModels ? "Loading..." : "Use intent routing (default)"}
+              loading={loadingModels}
               className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
-            >
-              <option value="">Use intent routing (default)</option>
-              {allModels.map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
+            />
           </div>
 
           <div>

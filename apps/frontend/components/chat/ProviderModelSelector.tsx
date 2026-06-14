@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { listProviders, fetchProviderModels } from '@/lib/api';
-import type { ProviderCatalogItem } from '@/lib/types';
+import React from 'react';
+import { GroupedModelSelect } from '@/components/common/GroupedModelSelect';
+import { useModelCatalog } from '@/hooks/useModelCatalog';
 import { useI18n } from '@/contexts/I18nContext';
 
 interface ProviderModelSelectorProps {
@@ -21,107 +21,27 @@ export const ProviderModelSelector: React.FC<ProviderModelSelectorProps> = ({
   disabled = false,
 }) => {
   const { t } = useI18n();
-  const [providers, setProviders] = useState<ProviderCatalogItem[]>([]);
-  const [models, setModels] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { groups: modelGroups, loading } = useModelCatalog();
 
-  // Load providers on mount
-  useEffect(() => {
-    const loadProviders = async () => {
-      try {
-        setLoading(true);
-        const data = await listProviders();
-        setProviders(data);
-        // Set default provider if none selected
-        if (!selectedProvider && data.length > 0) {
-          onProviderChange(data[0].id);
-        }
-      } catch (error) {
-        console.error('Failed to load providers:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadProviders();
-  }, [selectedProvider, onProviderChange]);
-
-  // Load models when provider changes
-  useEffect(() => {
-    const loadModels = async () => {
-      if (!selectedProvider) return;
-      try {
-        setLoading(true);
-        const data = await fetchProviderModels(selectedProvider);
-        setModels(data);
-        // Set default model if none selected or current not in list
-        if (data.length > 0 && (!selectedModel || !data.includes(selectedModel))) {
-          onModelChange(data[0]);
-        }
-      } catch (error) {
-        console.error('Failed to load models:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadModels();
-  }, [selectedProvider, selectedModel, onModelChange]);
-
-  const handleProviderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newProvider = e.target.value;
-    onProviderChange(newProvider);
-    // Reset model when provider changes
-    const provider = providers.find((p) => p.id === newProvider);
-    if (provider?.default_model) {
-      onModelChange(provider.default_model);
-    }
+  const handleModelChange = (modelId: string, provider?: string) => {
+    if (provider) onProviderChange(provider);
+    onModelChange(modelId);
   };
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full min-w-0">
-      {/* Provider Selector */}
-      <div className="flex flex-col gap-1 flex-1 min-w-0 sm:flex-none sm:min-w-[140px]">
-        {/* <label htmlFor="provider-select" className="text-xs font-medium text-gray-400">
-          {t('chat.provider', 'Provider')}
-        </label> */}
-        <select
-          id="provider-select"
-          value={selectedProvider}
-          onChange={handleProviderChange}
-          disabled={disabled || loading || providers.length === 0}
-          className="w-full sm:w-auto min-w-0 px-2 py-1 text-sm bg-gray-700 text-white border border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <option value="">
-            {loading ? t('common.loading', 'Loading...') : t('chat.selectProvider', 'Select Provider')}
-          </option>
-          {providers.map((provider) => (
-            <option key={provider.id} value={provider.id}>
-              {t(`providers.${provider.id}`, provider.name)}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Model Selector */}
-      <div className="flex flex-col gap-1 flex-1 min-w-0 sm:flex-none sm:min-w-[180px]">
-        {/* <label htmlFor="model-select" className="text-xs font-medium text-gray-400">
-          {t('chat.model', 'Model')}
-        </label> */}
-        <select
-          id="model-select"
+      <div className="flex flex-col gap-1 flex-1 min-w-0">
+        <GroupedModelSelect
+          groups={modelGroups}
           value={selectedModel}
-          onChange={(e) => onModelChange(e.target.value)}
-          disabled={disabled || loading || models.length === 0 || !selectedProvider}
+          valueProvider={selectedProvider}
+          onChange={handleModelChange}
+          allowEmpty={false}
+          emptyOption={t('common.loading', 'Loading...')}
+          loading={loading}
+          disabled={disabled}
           className="w-full sm:w-auto min-w-0 px-2 py-1 text-sm bg-gray-700 text-white border border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <option value="">
-            {loading ? t('common.loading', 'Loading...') : t('chat.selectModel', 'Select Model')}
-          </option>
-          {models.map((model) => (
-            <option key={model} value={model}>
-              {t(`models.${model}`, model)}
-            </option>
-          ))}
-        </select>
+        />
       </div>
     </div>
   );

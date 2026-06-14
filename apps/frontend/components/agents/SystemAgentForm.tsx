@@ -8,7 +8,8 @@ import type {
   SystemAgentCreateRequest,
   SystemAgentUpdateRequest,
 } from "@/lib/types";
-import { PROVIDERS } from "@/lib/types";
+import { GroupedModelSelect } from "@/components/common/GroupedModelSelect";
+import { useModelCatalog } from "@/hooks/useModelCatalog";
 import { categoryBadgeClass } from "./CategoryBadge";
 import { IconPicker } from "./IconPicker";
 import { AgentIcon } from "./AgentIcon";
@@ -34,6 +35,7 @@ export function SystemAgentForm({ categories, initial, onSubmit, onCancel }: Pro
   const [icon, setIcon] = useState<string | null>(initial?.icon ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { groups: modelGroups, loading: loadingModels } = useModelCatalog();
 
   const toggleTool = (id: string) => {
     setTools((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
@@ -73,8 +75,6 @@ export function SystemAgentForm({ categories, initial, onSubmit, onCancel }: Pro
       setSaving(false);
     }
   };
-
-  const allModels = PROVIDERS.flatMap((p) => p.models);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
@@ -151,16 +151,14 @@ export function SystemAgentForm({ categories, initial, onSubmit, onCancel }: Pro
 
           <div>
             <label className="block text-xs text-gray-400 mb-1">Model (tùy chọn)</label>
-            <select
+            <GroupedModelSelect
+              groups={modelGroups}
               value={model}
-              onChange={(e) => setModel(e.target.value)}
+              onChange={(modelId) => setModel(modelId)}
+              emptyOption={loadingModels ? "Đang tải..." : "Mặc định hệ thống"}
+              loading={loadingModels}
               className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
-            >
-              <option value="">Mặc định hệ thống</option>
-              {allModels.map((m) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
+            />
           </div>
 
           <div>

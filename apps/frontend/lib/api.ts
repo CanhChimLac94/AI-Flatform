@@ -437,7 +437,9 @@ export async function fetchProviderModels(provider: string): Promise<string[]> {
   return request<string[]>(`/settings/providers/${provider}/models`);
 }
 
-// ── Provider model catalog (per channel) ─────────────────────────────────────
+export async function listModelCatalog(): Promise<ProviderModelGroup[]> {
+  return request<ProviderModelGroup[]>("/settings/models/catalog");
+}
 
 export async function listProviderModelGroups(): Promise<ProviderModelGroup[]> {
   return request<ProviderModelGroup[]>("/settings/provider-models");

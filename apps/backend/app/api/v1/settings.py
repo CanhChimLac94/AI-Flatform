@@ -46,6 +46,7 @@ from app.schemas.provider_model import (
 from app.services.provider_models import (
     enabled_model_ids,
     ensure_provider_seeded,
+    list_enabled_catalog_groups,
     list_provider_entries,
     list_provider_groups,
 )
@@ -438,9 +439,27 @@ async def get_provider_models(
     """Returns enabled models for the user catalog, or static registry for guests."""
     if provider_id not in REGISTRY:
         raise HTTPException(status_code=404, detail=f"Unknown provider: {provider_id}")
-    if current_user is not None and current_user.is_admin:
+    if current_user is not None:
         return await enabled_model_ids(db, current_user.id, provider_id)
     return get_models(provider_id)
+
+
+@router.get("/models/catalog", response_model=list[ProviderModelGroupOut])
+async def get_models_catalog(
+    current_user: User | None = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Enabled models grouped by provider, with optional display names."""
+    user_id = current_user.id if current_user is not None else None
+    groups = await list_enabled_catalog_groups(db, user_id)
+    return [
+        ProviderModelGroupOut(
+            provider=g["provider"],
+            provider_name=g["provider_name"],
+            models=[ProviderModelEntryOut.model_validate(m) for m in g["models"]],
+        )
+        for g in groups
+    ]
 
 
 # ── Per-user provider model catalog ───────────────────────────────────────────

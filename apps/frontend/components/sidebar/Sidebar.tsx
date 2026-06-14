@@ -8,37 +8,20 @@ import {
   TrashIcon,
   ChatBubbleLeftIcon,
   UserCircleIcon,
-  CpuChipIcon,
   PencilIcon,
   CheckIcon,
   XMarkIcon,
-  Squares2X2Icon,
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
 } from "@heroicons/react/24/outline";
 import type { Conversation } from "@/lib/types";
 import { createConversation, deleteConversation, fetchConversations, renameConversation } from "@/lib/api";
 import { QuotaMeter } from "./QuotaMeter";
+import { SIDEBAR_NAV_ITEMS } from "./navVisuals";
 import { useAuth } from "@/contexts/AuthContext";
 import { useI18n } from "@/contexts/I18nContext";
 
 const SIDEBAR_COLLAPSED_KEY = "omni_sidebar_collapsed";
-
-const NAV_ITEMS = [
-  { href: "/chat", labelKey: "nav.chat", icon: ChatBubbleLeftIcon, match: (path: string) => path === "/chat" },
-  {
-    href: "/agents",
-    labelKey: "nav.agents",
-    icon: CpuChipIcon,
-    match: (path: string) => path === "/agents",
-  },
-  {
-    href: "/agents/flows",
-    labelKey: "nav.flow",
-    icon: Squares2X2Icon,
-    match: (path: string) => path.startsWith("/agents/flow") || path === "/agents/flows",
-  },
-] as const;
 
 interface SidebarProps {
   activeConvId?: string;
@@ -179,13 +162,13 @@ export function Sidebar({
     if (e.key === "Escape") { e.preventDefault(); cancelEdit(); }
   };
 
-  const navLinkClass = (active: boolean) =>
-    `flex items-center rounded-lg text-sm transition-colors ${
-      collapsed && !mobileOpen ? "justify-center p-2.5" : "gap-2 px-3 py-2"
+  const navLinkClass = (active: boolean, rowActive: string) =>
+    `group flex items-center rounded-xl text-sm font-medium transition-all duration-200 ${
+      collapsed && !mobileOpen ? "justify-center p-2" : "gap-2.5 px-2 py-2"
     } ${
       active
-        ? "bg-gray-700 text-white"
-        : "text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+        ? rowActive
+        : "text-muted border border-transparent hover:bg-surface-hover hover:text-foreground"
     }`;
 
   const isDrawerExpanded = mobileOpen || !collapsed;
@@ -272,20 +255,32 @@ export function Sidebar({
       )}
 
       {/* Main navigation */}
-      <nav className={`py-2 border-b border-gray-700 space-y-0.5 ${isDrawerExpanded ? "px-2" : "px-1"}`}>
-        {NAV_ITEMS.map(({ href, labelKey, icon: Icon, match }) => {
+      <nav className={`py-2 border-b border-gray-700 space-y-1 ${isDrawerExpanded ? "px-2" : "px-1"}`}>
+        {SIDEBAR_NAV_ITEMS.map(({ href, labelKey, icon: Icon, match, visual }) => {
           const active = match(pathname);
           const label = t(labelKey);
+          const iconBoxSize = isDrawerExpanded ? "w-8 h-8" : "w-9 h-9";
+          const iconSize = isDrawerExpanded ? "w-4 h-4" : "w-[18px] h-[18px]";
           return (
             <Link
               key={href}
               href={href}
               title={label}
               onClick={() => onMobileClose?.()}
-              className={navLinkClass(active)}
+              className={navLinkClass(active, visual.rowActive)}
             >
-              <Icon className={`shrink-0 opacity-60 ${isDrawerExpanded ? "w-3.5 h-3.5" : "w-5 h-5"}`} />
-              {isDrawerExpanded && label}
+              <span
+                className={`flex items-center justify-center rounded-lg border shrink-0 transition-all duration-200 group-hover:scale-105 ${
+                  iconBoxSize
+                } ${active ? visual.boxActive : visual.box}`}
+              >
+                <Icon
+                  className={`${iconSize} transition-colors duration-200 ${
+                    active ? visual.iconActive : visual.icon
+                  }`}
+                />
+              </span>
+              {isDrawerExpanded && <span className="truncate">{label}</span>}
             </Link>
           );
         })}

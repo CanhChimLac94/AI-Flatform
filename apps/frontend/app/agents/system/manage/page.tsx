@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ServerStackIcon, PlusIcon, ArrowLeftIcon, FolderIcon, CpuChipIcon } from "@heroicons/react/24/outline";
+import { ServerStackIcon, PlusIcon, ArrowLeftIcon, FolderIcon, CpuChipIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CategoryFilter } from "@/components/agents/CategoryFilter";
 import { SystemAgentCard } from "@/components/agents/SystemAgentCard";
 import { SystemAgentForm } from "@/components/agents/SystemAgentForm";
+import { AgentDesignChat } from "@/components/agents/AgentDesignChat";
 import { CategoryManager } from "@/components/agents/CategoryManager";
 import { useAuth } from "@/contexts/AuthContext";
 import { useI18n } from "@/contexts/I18nContext";
@@ -44,6 +45,7 @@ export default function SystemAgentsManagePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formMode, setFormMode] = useState<FormMode>(null);
+  const [designChatOpen, setDesignChatOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<SystemAgent | null>(null);
   const [activeTab, setActiveTab] = useState<ManageTab>("agents");
 
@@ -83,6 +85,12 @@ export default function SystemAgentsManagePage() {
       setAgents((prev) => [created, ...prev]);
     }
     setFormMode(null);
+  };
+
+  const handleDesignConfirm = async (data: SystemAgentCreateRequest) => {
+    const created = await createSystemAgent(data);
+    setAgents((prev) => [created, ...prev]);
+    setDesignChatOpen(false);
   };
 
   const handleDelete = async (agent: SystemAgent) => {
@@ -137,14 +145,24 @@ export default function SystemAgentsManagePage() {
               <span className="hidden sm:inline">{t("agents.library", "Library")}</span>
             </Link>
             {activeTab === "agents" && (
-              <button
-                onClick={() => setFormMode({ type: "create" })}
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors"
-                title={t("agents.newSystemAgent", "New agent")}
-              >
-                <PlusIcon className="w-4 h-4" />
-                <span className="hidden sm:inline">{t("agents.newSystemAgent", "New agent")}</span>
-              </button>
+              <>
+                <button
+                  onClick={() => setDesignChatOpen(true)}
+                  className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-violet-600/60 hover:border-violet-400 text-violet-300 hover:text-violet-200 text-xs font-medium rounded-lg transition-colors"
+                  title={t("agents.designChat.title", "Create agent with AI")}
+                >
+                  <SparklesIcon className="w-4 h-4" />
+                  <span className="hidden sm:inline">{t("agents.designChat.short", "Create with AI")}</span>
+                </button>
+                <button
+                  onClick={() => setFormMode({ type: "create" })}
+                  className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors"
+                  title={t("agents.newSystemAgent", "New agent")}
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  <span className="hidden sm:inline">{t("agents.newSystemAgent", "New agent")}</span>
+                </button>
+              </>
             )}
           </div>
         }
@@ -227,6 +245,15 @@ export default function SystemAgentsManagePage() {
           )}
         </div>
       </main>
+
+      {designChatOpen && (
+        <AgentDesignChat
+          scope="system"
+          categories={categories}
+          onClose={() => setDesignChatOpen(false)}
+          onConfirm={handleDesignConfirm}
+        />
+      )}
 
       {formMode && (
         <SystemAgentForm

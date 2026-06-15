@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { PlusIcon, CpuChipIcon, Squares2X2Icon, ServerStackIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, CpuChipIcon, Squares2X2Icon, ServerStackIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import type { Agent, AgentCategory, AgentCreateRequest, AgentUpdateRequest } from "@/lib/types";
 import { AgentCard } from "@/components/agents/AgentCard";
 import { AgentForm } from "@/components/agents/AgentForm";
+import { AgentDesignChat } from "@/components/agents/AgentDesignChat";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,6 +29,7 @@ export default function AgentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formMode, setFormMode] = useState<FormMode>(null);
+  const [designChatOpen, setDesignChatOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<Agent | null>(null);
 
   const load = useCallback(async () => {
@@ -87,6 +89,29 @@ export default function AgentsPage() {
     }
     setFormMode(null);
   }, [formMode, isAuthenticated, categories]);
+
+  const handleDesignConfirm = useCallback(
+    async (data: AgentCreateRequest) => {
+      const categoryIds = data.category_ids ?? [];
+      const selectedCategories = categories.filter((c) => categoryIds.includes(c.id));
+      if (isAuthenticated) {
+        const created = await createAgent(data);
+        setAgents((prev) => [created, ...prev]);
+      } else {
+        const created = createGuestAgent({
+          ...data,
+          system_prompt: data.system_prompt ?? "",
+          params: {},
+          tools: data.tools ?? [],
+          is_public: data.is_public ?? false,
+          categories: selectedCategories,
+        });
+        setAgents((prev) => [created, ...prev]);
+      }
+      setDesignChatOpen(false);
+    },
+    [isAuthenticated, categories],
+  );
 
   const handleDuplicate = useCallback(async (agent: Agent) => {
     try {
@@ -148,6 +173,14 @@ export default function AgentsPage() {
               <span className="hidden sm:inline">{t("agents.manageFlows")}</span>
             </Link>
             <button
+              onClick={() => setDesignChatOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-violet-600/60 hover:border-violet-400 text-violet-300 hover:text-violet-200 text-xs font-medium rounded-lg transition-colors"
+              title={t("agents.designChat.title", "Create agent with AI")}
+            >
+              <SparklesIcon className="w-4 h-4" />
+              <span className="hidden sm:inline">{t("agents.designChat.short", "Create with AI")}</span>
+            </button>
+            <button
               onClick={() => setFormMode({ type: "create" })}
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-colors"
               title={t("agents.newAgent")}
@@ -207,6 +240,15 @@ export default function AgentsPage() {
           )}
         </div>
       </main>
+
+      {designChatOpen && (
+        <AgentDesignChat
+          scope="personal"
+          categories={categories}
+          onClose={() => setDesignChatOpen(false)}
+          onConfirm={handleDesignConfirm}
+        />
+      )}
 
       {formMode && (
         <AgentForm

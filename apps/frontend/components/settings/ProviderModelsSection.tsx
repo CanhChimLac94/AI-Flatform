@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   PlusIcon,
@@ -9,8 +9,10 @@ import {
   CheckIcon,
   XMarkIcon,
   ShieldExclamationIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
 } from "@heroicons/react/24/outline";
-import type { ProviderModelEntry, ProviderModelGroup } from "@/lib/types";
+import type { ProviderModelEntry, ProviderModelExportPayload, ProviderModelGroup } from "@/lib/types";
 import { PROVIDERS } from "@/lib/types";
 import { getProviderVisual } from "@/lib/providerVisuals";
 import {
@@ -18,8 +20,12 @@ import {
   createProviderModel,
   updateProviderModel,
   deleteProviderModel,
+  bulkProviderModels,
+  exportProviderModelCatalog,
+  importProviderModelCatalog,
 } from "@/lib/api";
 import { ProviderChannelSelect } from "./ProviderChannelSelect";
+import { useI18n } from "@/contexts/I18nContext";
 
 function displayLabel(entry: ProviderModelEntry): string {
   return entry.display_name?.trim() || entry.model_id;
@@ -59,15 +65,22 @@ function ToggleSwitch({
 
 function ModelTableRow({
   entry,
+  selected,
+  onSelectChange,
+  selectionDisabled,
   onToggle,
   onSave,
   onDelete,
 }: {
   entry: ProviderModelEntry;
+  selected: boolean;
+  onSelectChange: (checked: boolean) => void;
+  selectionDisabled?: boolean;
   onToggle: (enabled: boolean) => Promise<void>;
   onSave: (patch: { model_id?: string; display_name?: string | null }) => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
+  const { t } = useI18n();
   const [editing, setEditing] = useState(false);
   const [modelId, setModelId] = useState(entry.model_id);
   const [displayName, setDisplayName] = useState(entry.display_name ?? "");
@@ -122,7 +135,7 @@ function ModelTableRow({
   if (editing) {
     return (
       <tr className="bg-surface-muted">
-        <td colSpan={5} className="px-4 py-3">
+        <td colSpan={6} className="px-4 py-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] text-muted mb-1">Model ID</label>
@@ -172,8 +185,18 @@ function ModelTableRow({
     <tr
       className={`border-t border-border transition-colors ${
         entry.is_enabled ? "hover:bg-surface-hover" : "opacity-70 hover:opacity-90 hover:bg-surface-hover"
-      }`}
+      } ${selected ? "bg-blue-500/5" : ""}`}
     >
+      <td className="px-3 sm:px-4 py-3 w-10">
+        <input
+          type="checkbox"
+          checked={selected}
+          disabled={selectionDisabled || busy}
+          onChange={(e) => onSelectChange(e.target.checked)}
+          aria-label={t("settings.modelsSection.selectRow", "Chọn model")}
+          className="h-4 w-4 rounded border-border text-blue-600 focus:ring-blue-500/50 disabled:opacity-40"
+        />
+      </td>
       <td className="px-3 sm:px-4 py-3">
         <code className="text-xs text-sky-500 font-mono break-all">{entry.model_id}</code>
       </td>
@@ -241,6 +264,7 @@ function ProviderPanel({
   group: ProviderModelGroup;
   onUpdated: () => void;
 }) {
+  const { t } = useI18n();
   const visual = getProviderVisual(group.provider, group.provider_name);
   const Icon = visual.icon;
   const [showAdd, setShowAdd] = useState(false);
@@ -248,8 +272,140 @@ function ProviderPanel({
   const [newDisplayName, setNewDisplayName] = useState("");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [group.provider, group.models]);
 
   const enabledCount = group.models.filter((m) => m.is_enabled).length;
+  const allSelected =
+    group.models.length > 0 && selectedIds.size === group.models.length;
+  const someSelected = selectedIds.size > 0 && !allSelected;
+  const controlsDisabled = bulkBusy || adding;
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(group.models.map((m) => m.id)));
+    }
+  };
+
+  const toggleRowSelection = (entryId: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(entryId);
+      else next.delete(entryId);
+      return next;
+    });
+  };
+
+  const runBulk = async (
+    body: Parameters<typeof bulkProviderModels>[1],
+  ) => {
+    setBulkBusy(true);
+    setBulkError(null);
+    try {
+      await bulkProviderModels(group.provider, body);
+      setSelectedIds(new Set());
+      onUpdated();
+    } catch (e: unknown) {
+      setBulkError(e instanceof Error ? e.message : "Thao tác thất bại");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleEnableAll = () => runBulk({ apply_to: "all", action: "enable" });
+  const handleDisableAll = () => runBulk({ apply_to: "all", action: "disable" });
+
+  const handleBulkEnable = () =>
+    runBulk({ entry_ids: Array.from(selectedIds), action: "enable" });
+  const handleBulkDisable = () =>
+    runBulk({ entry_ids: Array.from(selectedIds), action: "disable" });
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.size;
+    if (
+      !confirm(
+        t(
+          "settings.modelsSection.confirmBulkDelete",
+          "Xóa {count} model khỏi kênh này?",
+        ).replace("{count}", String(count)),
+      )
+    ) {
+      return;
+    }
+    await runBulk({ entry_ids: Array.from(selectedIds), action: "delete" });
+  };
+
+  const handleExport = async () => {
+    setBulkBusy(true);
+    setBulkError(null);
+    try {
+      const payload = await exportProviderModelCatalog(group.provider);
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${group.provider}-models.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (e: unknown) {
+      setBulkError(e instanceof Error ? e.message : "Export thất bại");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile = async (file: File) => {
+    setBulkBusy(true);
+    setBulkError(null);
+    try {
+      const parsed = JSON.parse(await file.text()) as ProviderModelExportPayload;
+      if (!parsed.models?.length) {
+        throw new Error("File JSON không có danh sách model");
+      }
+      if (parsed.provider && parsed.provider !== group.provider) {
+        const ok = confirm(
+          t(
+            "settings.modelsSection.importProviderMismatch",
+            "File thuộc kênh {fileProvider}, import vào {targetProvider}?",
+          )
+            .replace("{fileProvider}", parsed.provider)
+            .replace("{targetProvider}", group.provider),
+        );
+        if (!ok) return;
+      }
+      const replace = confirm(
+        t(
+          "settings.modelsSection.importReplaceConfirm",
+          "Thay thế toàn bộ model hiện tại? Chọn Cancel để gộp (merge).",
+        ),
+      );
+      await importProviderModelCatalog(group.provider, {
+        mode: replace ? "replace" : "merge",
+        models: parsed.models,
+      });
+      setSelectedIds(new Set());
+      onUpdated();
+    } catch (e: unknown) {
+      setBulkError(e instanceof Error ? e.message : "Import thất bại");
+    } finally {
+      setBulkBusy(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleToggle = async (entry: ProviderModelEntry, enabled: boolean) => {
     await updateProviderModel(group.provider, entry.id, { is_enabled: enabled });
@@ -307,17 +463,115 @@ function ProviderPanel({
             </p>
           </div>
         </div>
-        {!showAdd && (
+        <div className="flex flex-wrap items-center gap-2 shrink-0 self-start sm:self-auto">
           <button
             type="button"
-            onClick={() => setShowAdd(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-on-accent bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors shrink-0 self-start sm:self-auto"
+            onClick={handleExport}
+            disabled={controlsDisabled}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-foreground border border-border bg-surface-elevated hover:bg-surface-hover rounded-lg transition-colors disabled:opacity-40"
           >
-            <PlusIcon className="w-4 h-4" />
-            Thêm model
+            <ArrowDownTrayIcon className="w-4 h-4" />
+            {t("settings.modelsSection.exportJson", "Export JSON")}
           </button>
-        )}
+          <button
+            type="button"
+            onClick={handleImportClick}
+            disabled={controlsDisabled}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-foreground border border-border bg-surface-elevated hover:bg-surface-hover rounded-lg transition-colors disabled:opacity-40"
+          >
+            <ArrowUpTrayIcon className="w-4 h-4" />
+            {t("settings.modelsSection.importJson", "Import JSON")}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleImportFile(file);
+            }}
+          />
+          {group.models.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={handleEnableAll}
+                disabled={controlsDisabled}
+                className="inline-flex items-center px-3 py-2 text-xs font-medium text-foreground border border-border bg-surface-elevated hover:bg-surface-hover rounded-lg transition-colors disabled:opacity-40"
+              >
+                {t("settings.modelsSection.enableAll", "Bật tất cả")}
+              </button>
+              <button
+                type="button"
+                onClick={handleDisableAll}
+                disabled={controlsDisabled}
+                className="inline-flex items-center px-3 py-2 text-xs font-medium text-foreground border border-border bg-surface-elevated hover:bg-surface-hover rounded-lg transition-colors disabled:opacity-40"
+              >
+                {t("settings.modelsSection.disableAll", "Tắt tất cả")}
+              </button>
+            </>
+          )}
+          {!showAdd && (
+            <button
+              type="button"
+              onClick={() => setShowAdd(true)}
+              disabled={controlsDisabled}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-on-accent bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors disabled:opacity-40"
+            >
+              <PlusIcon className="w-4 h-4" />
+              Thêm model
+            </button>
+          )}
+        </div>
       </div>
+
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-border bg-blue-500/5">
+          <span className="text-xs text-foreground mr-1">
+            {t("settings.modelsSection.selectedCount", "Đã chọn {count} model").replace(
+              "{count}",
+              String(selectedIds.size),
+            )}
+          </span>
+          <button
+            type="button"
+            onClick={handleBulkEnable}
+            disabled={controlsDisabled}
+            className="px-2.5 py-1 text-xs font-medium text-foreground border border-border bg-surface-elevated hover:bg-surface-hover rounded-lg disabled:opacity-40"
+          >
+            {t("settings.modelsSection.bulkEnable", "Bật")}
+          </button>
+          <button
+            type="button"
+            onClick={handleBulkDisable}
+            disabled={controlsDisabled}
+            className="px-2.5 py-1 text-xs font-medium text-foreground border border-border bg-surface-elevated hover:bg-surface-hover rounded-lg disabled:opacity-40"
+          >
+            {t("settings.modelsSection.bulkDisable", "Tắt")}
+          </button>
+          <button
+            type="button"
+            onClick={handleBulkDelete}
+            disabled={controlsDisabled}
+            className="px-2.5 py-1 text-xs font-medium text-red-400 border border-red-500/30 bg-surface-elevated hover:bg-red-500/10 rounded-lg disabled:opacity-40"
+          >
+            {t("settings.modelsSection.bulkDelete", "Xóa")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedIds(new Set())}
+            disabled={controlsDisabled}
+            className="px-2.5 py-1 text-xs text-muted hover:text-foreground border border-border rounded-lg disabled:opacity-40"
+          >
+            {t("settings.modelsSection.clearSelection", "Bỏ chọn")}
+          </button>
+        </div>
+      )}
+
+      {bulkError && (
+        <p className="px-4 py-2 text-xs text-red-400 border-b border-border">{bulkError}</p>
+      )}
 
       {showAdd && (
         <div className="px-4 py-3 border-b border-border bg-surface-muted space-y-3">
@@ -366,6 +620,19 @@ function ProviderPanel({
         <table className="w-full text-left table-fixed sm:table-auto">
           <thead>
             <tr className="bg-surface-muted text-[11px] uppercase tracking-wider text-muted">
+              <th className="px-3 sm:px-4 py-2.5 font-semibold w-10">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someSelected;
+                  }}
+                  disabled={controlsDisabled || group.models.length === 0}
+                  onChange={toggleSelectAll}
+                  aria-label={t("settings.modelsSection.selectAll", "Chọn tất cả")}
+                  className="h-4 w-4 rounded border-border text-blue-600 focus:ring-blue-500/50 disabled:opacity-40"
+                />
+              </th>
               <th className="px-3 sm:px-4 py-2.5 font-semibold min-w-[200px]">Model ID</th>
               <th className="px-3 sm:px-4 py-2.5 font-semibold min-w-[120px]">Tên hiển thị</th>
               <th className="px-3 sm:px-4 py-2.5 font-semibold w-28">Loại</th>
@@ -376,7 +643,7 @@ function ProviderPanel({
           <tbody className="bg-surface">
             {group.models.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted">
+                <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted">
                   Chưa có model nào cho kênh này.
                 </td>
               </tr>
@@ -385,6 +652,9 @@ function ProviderPanel({
                 <ModelTableRow
                   key={entry.id}
                   entry={entry}
+                  selected={selectedIds.has(entry.id)}
+                  onSelectChange={(checked) => toggleRowSelection(entry.id, checked)}
+                  selectionDisabled={controlsDisabled}
                   onToggle={(enabled) => handleToggle(entry, enabled)}
                   onSave={(patch) => handleSave(entry, patch)}
                   onDelete={() => handleDelete(entry)}

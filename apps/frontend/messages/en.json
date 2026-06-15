@@ -151,6 +151,8 @@
     "cancel": "Cancel",
     "apiKeysSection": {
       "intro": "Configure API keys per channel. Keys are encrypted when stored on the server.",
+      "guestIntro": "Add API keys per channel for this session only. Keys are stored in temporary memory and cleared when you reload the page.",
+      "guestSessionNotice": "API keys are kept only for this browser tab and must be re-entered after reload.",
       "addKey": "Add key",
       "getKey": "Get key",
       "getKeyTitle": "Get {name} API key",
@@ -187,6 +189,22 @@
         "keyUsable": "Key usable (non-placeholder)",
         "modelsEnabled": "{count} model(s) enabled in Settings → Model"
       }
+    },
+    "modelsSection": {
+      "enableAll": "Enable all",
+      "disableAll": "Disable all",
+      "selectedCount": "{count} model(s) selected",
+      "bulkEnable": "Enable",
+      "bulkDisable": "Disable",
+      "bulkDelete": "Delete",
+      "clearSelection": "Clear selection",
+      "confirmBulkDelete": "Delete {count} model(s) from this channel?",
+      "selectAll": "Select all",
+      "selectRow": "Select model",
+      "exportJson": "Export JSON",
+      "importJson": "Import JSON",
+      "importReplaceConfirm": "Replace all current models? Choose Cancel to merge instead.",
+      "importProviderMismatch": "File belongs to {fileProvider}. Import into {targetProvider}?"
     }
   },
   "agents": {
@@ -195,6 +213,28 @@
     "systemLibrary": "System library",
     "manageFlows": "Manage flows",
     "newAgent": "New agent",
+    "designChat": {
+      "title": "Create agent with AI",
+      "short": "Create with AI",
+      "scopePersonal": "Personal",
+      "scopeSystem": "System",
+      "opener": "Describe the agent you want — its role, tone, and tasks. I'll draft it for you to review and confirm.",
+      "placeholder": "Describe your agent or ask for changes…",
+      "thinking": "Thinking…",
+      "draftPreview": "Draft preview",
+      "draftEmpty": "The proposed agent will appear here once the assistant has enough details.",
+      "readyHint": "Draft is ready — confirm to create, or keep chatting to refine.",
+      "confirmCreate": "Create agent",
+      "creating": "Creating…",
+      "refineHint": "Continue chatting to adjust name, prompt, categories, or tools before creating.",
+      "guestKeyRequired": "Configure an API key in Settings → API Keys (this session) before using AI design.",
+      "failed": "Design chat failed",
+      "createFailed": "Create failed",
+      "llmLabel": "Design assistant LLM",
+      "llmRequired": "Select a provider and model for the design assistant.",
+      "noModels": "No supported models available. Add an API key for Groq, OpenAI, OpenRouter, or NVIDIA.",
+      "noKeyForProvider": "No API key for this provider in the current session."
+    },
     "name": "Name",
     "description": "Description",
     "systemPrompt": "System Prompt",

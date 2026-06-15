@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   KeyIcon,
@@ -23,8 +23,8 @@ import {
   loadGuestSettings,
   setPreferredProvider,
   setPreferredModel,
+  GUEST_SETTINGS_UPDATED_EVENT,
 } from "@/lib/guestSettings";
-import { guestEnabledModelIds } from "@/lib/guestProviderModels";
 import {
   loadLocalPersona,
   saveLocalPersona,
@@ -270,10 +270,27 @@ function PreferenceSection({
 }) {
   const currentProvider =
     PROVIDERS.find((p) => p.id === preferredProvider) ?? PROVIDERS[0];
-  const enabledModels = guestEnabledModelIds(preferredProvider);
-  const modelOptions = enabledModels.length
-    ? enabledModels
-    : currentProvider.models;
+  const [modelOptions, setModelOptions] = useState<string[]>([]);
+  const [loadingModels, setLoadingModels] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingModels(true);
+    fetchProviderModels(preferredProvider)
+      .then((ids) => {
+        if (!cancelled) setModelOptions(ids);
+      })
+      .catch(() => {
+        if (!cancelled) setModelOptions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingModels(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [preferredProvider]);
+
   const currentModel =
     preferredModelByProvider[preferredProvider] ??
     modelOptions[0] ??
@@ -313,13 +330,18 @@ function PreferenceSection({
               setPreferredModel(preferredProvider, e.target.value);
               onChange();
             }}
-            className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+            disabled={loadingModels}
+            className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 disabled:opacity-60"
           >
-            {modelOptions.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
+            {modelOptions.length === 0 ? (
+              <option value={currentModel}>{currentModel}</option>
+            ) : (
+              modelOptions.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))
+            )}
           </select>
         </div>
       </div>
@@ -358,7 +380,15 @@ export default function SettingsPage() {
 
   const [tick, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
-  const guestSettings = loadGuestSettings();
+  const [guestSettings, setGuestSettings] = useState(loadGuestSettings);
+
+  useEffect(() => {
+    if (isAuthenticated) return;
+    const sync = () => setGuestSettings(loadGuestSettings());
+    sync();
+    window.addEventListener(GUEST_SETTINGS_UPDATED_EVENT, sync);
+    return () => window.removeEventListener(GUEST_SETTINGS_UPDATED_EVENT, sync);
+  }, [isAuthenticated, tick]);
 
   return (
     <AppShell>
@@ -411,6 +441,15 @@ export default function SettingsPage() {
                 {t("settings.guestBannerLogin")}
               </Link>{" "}
               {t("settings.guestBannerSuffix")}
+              {activeTab === "api-keys" && (
+                <>
+                  {" "}
+                  {t(
+                    "settings.apiKeysSection.guestSessionNotice",
+                    "API keys are kept only for this browser tab and must be re-entered after reload.",
+                  )}
+                </>
+              )}
             </p>
           )}
 

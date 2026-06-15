@@ -151,6 +151,8 @@
     "cancel": "Hủy",
     "apiKeysSection": {
       "intro": "Cấu hình API key cho từng kênh. Key được mã hóa khi lưu trên server.",
+      "guestIntro": "Thêm API key cho từng kênh trong phiên làm việc này. Key chỉ lưu tạm trong bộ nhớ và sẽ mất khi tải lại trang.",
+      "guestSessionNotice": "API key chỉ giữ trong tab trình duyệt hiện tại — tải lại trang sẽ phải nhập lại.",
       "addKey": "Thêm key",
       "getKey": "Lấy key",
       "getKeyTitle": "Lấy API key {name}",
@@ -187,6 +189,22 @@
         "keyUsable": "Key hợp lệ (không phải placeholder)",
         "modelsEnabled": "{count} model đang bật trong Cài đặt → Model"
       }
+    },
+    "modelsSection": {
+      "enableAll": "Bật tất cả",
+      "disableAll": "Tắt tất cả",
+      "selectedCount": "Đã chọn {count} model",
+      "bulkEnable": "Bật",
+      "bulkDisable": "Tắt",
+      "bulkDelete": "Xóa",
+      "clearSelection": "Bỏ chọn",
+      "confirmBulkDelete": "Xóa {count} model khỏi kênh này?",
+      "selectAll": "Chọn tất cả",
+      "selectRow": "Chọn model",
+      "exportJson": "Export JSON",
+      "importJson": "Import JSON",
+      "importReplaceConfirm": "Thay thế toàn bộ model hiện tại? Chọn Cancel để gộp (merge).",
+      "importProviderMismatch": "File thuộc kênh {fileProvider}, import vào {targetProvider}?"
     }
   },
   "agents": {
@@ -195,6 +213,28 @@
     "systemLibrary": "Thư viện hệ thống",
     "manageFlows": "Quản lý Flow",
     "newAgent": "Agent mới",
+    "designChat": {
+      "title": "Tạo agent bằng AI",
+      "short": "Tạo bằng AI",
+      "scopePersonal": "Cá nhân",
+      "scopeSystem": "Hệ thống",
+      "opener": "Mô tả agent bạn muốn — vai trò, giọng điệu và nhiệm vụ. Tôi sẽ soạn bản nháp để bạn xem và xác nhận.",
+      "placeholder": "Mô tả agent hoặc yêu cầu chỉnh sửa…",
+      "thinking": "Đang xử lý…",
+      "draftPreview": "Xem trước bản nháp",
+      "draftEmpty": "Agent đề xuất sẽ hiện ở đây khi đã đủ thông tin.",
+      "readyHint": "Bản nháp đã sẵn sàng — xác nhận để tạo, hoặc tiếp tục chat để chỉnh.",
+      "confirmCreate": "Tạo agent",
+      "creating": "Đang tạo…",
+      "refineHint": "Tiếp tục chat để đổi tên, prompt, danh mục hoặc công cụ trước khi tạo.",
+      "guestKeyRequired": "Cấu hình API key trong Cài đặt → API Keys (phiên này) trước khi dùng tạo bằng AI.",
+      "failed": "Tạo agent bằng chat thất bại",
+      "createFailed": "Tạo agent thất bại",
+      "llmLabel": "LLM hỗ trợ thiết kế",
+      "llmRequired": "Chọn provider và model cho trợ lý thiết kế.",
+      "noModels": "Không có model hỗ trợ. Thêm API key cho Groq, OpenAI, OpenRouter hoặc NVIDIA.",
+      "noKeyForProvider": "Chưa có API key cho provider này trong phiên hiện tại."
+    },
     "name": "Tên",
     "description": "Mô tả",
     "systemPrompt": "Prompt hệ thống",

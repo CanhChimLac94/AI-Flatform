@@ -276,6 +276,20 @@ export async function duplicateAgent(id: string): Promise<Agent> {
   return request<Agent>(`/agents/${id}/duplicate`, { method: "POST" });
 }
 
+export async function designAgentChat(body: {
+  scope: "personal" | "system";
+  messages: import("./types").AgentDesignMessage[];
+  draft?: import("./types").AgentDraft | null;
+  provider?: string;
+  model?: string;
+  api_key?: string;
+}): Promise<import("./types").AgentDesignChatResponse> {
+  return request<import("./types").AgentDesignChatResponse>("/agents/design-chat", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 // ── Agent flows ───────────────────────────────────────────────────────────────
 
 export async function listFlows(): Promise<AgentFlowSummary[]> {
@@ -473,6 +487,41 @@ export async function updateProviderModel(
 
 export async function deleteProviderModel(provider: string, entryId: string): Promise<void> {
   await request(`/settings/provider-models/${provider}/${entryId}`, { method: "DELETE" });
+}
+
+export async function bulkProviderModels(
+  provider: string,
+  body: {
+    action: "enable" | "disable" | "delete";
+    entry_ids?: string[];
+    apply_to?: "all";
+  },
+): Promise<{ affected: number }> {
+  return request<{ affected: number }>(`/settings/provider-models/${provider}/bulk`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function exportProviderModelCatalog(
+  provider: string,
+): Promise<import("./types").ProviderModelExportPayload> {
+  return request<import("./types").ProviderModelExportPayload>(
+    `/settings/provider-models/${provider}/export`,
+  );
+}
+
+export async function importProviderModelCatalog(
+  provider: string,
+  body: {
+    mode: "replace" | "merge";
+    models: import("./types").ProviderModelExportPayload["models"];
+  },
+): Promise<{ imported: number }> {
+  return request<{ imported: number }>(`/settings/provider-models/${provider}/import`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export async function testProviderKey(

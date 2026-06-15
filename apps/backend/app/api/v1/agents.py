@@ -17,14 +17,16 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import get_current_user
+from app.api.dependencies import get_current_user, get_optional_user
 from app.db.session import get_db
 from app.models.agent_knowledge import AgentKnowledgeFile
 from app.models.user import User
 from app.repositories.agent import AgentRepository
 from app.repositories.system_agent import AgentCategoryRepository, SystemAgentRepository
 from app.schemas.agent import AgentCreate, AgentOut, AgentUpdate
+from app.schemas.agent_design import AgentDesignChatRequest, AgentDesignChatResponse
 from app.schemas.system_agent import AgentCategoryOut
+from app.services.agent_designer import run_agent_design_chat
 
 UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent.parent / "uploads"
 UPLOADS_DIR.mkdir(exist_ok=True)
@@ -101,6 +103,37 @@ async def create_agent(
     await db.commit()
     loaded = await repo.get_with_categories(agent.id)
     return _agent_out(loaded or agent)
+
+
+@router.post("/design-chat", response_model=AgentDesignChatResponse)
+async def agent_design_chat(
+    body: AgentDesignChatRequest,
+    current_user: User | None = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Conversational agent designer. Guest users must pass provider + api_key.
+    scope=system requires admin.
+    """
+    if body.scope == "system":
+        if current_user is None or not current_user.is_admin:
+            raise HTTPException(status_code=403, detail="Admin access required for system agent design")
+
+    try:
+        message, draft, ready = await run_agent_design_chat(
+            db,
+            current_user,
+            scope=body.scope,
+            messages=body.messages,
+            current_draft=body.draft,
+            provider=body.provider,
+            model=body.model,
+            api_key=body.api_key,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return AgentDesignChatResponse(message=message, draft=draft, ready=ready)
 
 
 @router.get("/{agent_id}", response_model=AgentOut)

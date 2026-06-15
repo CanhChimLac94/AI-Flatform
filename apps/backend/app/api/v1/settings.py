@@ -17,6 +17,9 @@ Default provider/model:
 Provider catalogue (no auth needed):
   GET    /settings/providers              → list all providers with metadata
   GET    /settings/providers/{id}/models  → model list for a provider
+
+Per-user model catalog (admin):
+  POST   /settings/provider-models/{provider}/bulk → bulk enable/disable/delete
 """
 
 from uuid import UUID
@@ -38,17 +41,25 @@ from app.services.provider_registry import (
 )
 from app.repositories.user_provider_model import UserProviderModelRepository
 from app.schemas.provider_model import (
+    BulkProviderModelRequest,
+    BulkProviderModelResponse,
     CreateProviderModelRequest,
+    ImportProviderModelRequest,
+    ImportProviderModelResponse,
     ProviderModelEntryOut,
+    ProviderModelExportOut,
     ProviderModelGroupOut,
     UpdateProviderModelRequest,
 )
 from app.services.provider_models import (
+    bulk_update_provider_models,
     enabled_model_ids,
-    ensure_provider_seeded,
+    export_provider_catalog,
+    import_provider_catalog,
     list_enabled_catalog_groups,
     list_provider_entries,
     list_provider_groups,
+    resolve_catalog_user,
 )
 from app.services.user_keys import invalidate_cache, get_all_effective_keys, is_usable_api_key
 
@@ -454,12 +465,12 @@ async def patch_defaults(
 
 @router.get("/providers", response_model=list[ProviderCatalogItem])
 async def list_providers():
-    """Returns all supported providers with model lists.  No auth required."""
+    """Returns supported providers (metadata only; model lists live in DB catalog)."""
     return [
         ProviderCatalogItem(
             id=pid,
             name=info["name"],
-            models=info["models"],
+            models=[],
             default_model=info["default_model"],
             key_prefix_hint=info["key_prefix_hint"],
         )
@@ -473,12 +484,10 @@ async def get_provider_models(
     current_user: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Returns enabled models for the user catalog, or static registry for guests."""
+    """Returns enabled models from the system DB catalog."""
     if provider_id not in REGISTRY:
         raise HTTPException(status_code=404, detail=f"Unknown provider: {provider_id}")
-    if current_user is not None:
-        return await enabled_model_ids(db, current_user.id, provider_id)
-    return get_models(provider_id)
+    return await enabled_model_ids(db, None, provider_id)
 
 
 @router.get("/models/catalog", response_model=list[ProviderModelGroupOut])
@@ -487,9 +496,11 @@ async def get_models_catalog(
     current_user: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Enabled models grouped by provider, with optional display names."""
-    user_id = current_user.id if current_user is not None else None
-    groups = await list_enabled_catalog_groups(db, user_id, require_keys=require_keys)
+    """Enabled models grouped by provider from the system DB catalog."""
+    keys_user_id = current_user.id if current_user is not None else None
+    groups = await list_enabled_catalog_groups(
+        db, None, require_keys=require_keys, keys_user_id=keys_user_id
+    )
     return [
         ProviderModelGroupOut(
             provider=g["provider"],
@@ -500,14 +511,14 @@ async def get_models_catalog(
     ]
 
 
-# ── Per-user provider model catalog ───────────────────────────────────────────
+# ── System provider model catalog (admin, stored in DB) ─────────────────────────
 
 @router.get("/provider-models", response_model=list[ProviderModelGroupOut])
 async def list_all_provider_models(
     current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    groups = await list_provider_groups(db, current_user.id)
+    groups = await list_provider_groups(db)
     return [
         ProviderModelGroupOut(
             provider=g["provider"],
@@ -516,6 +527,37 @@ async def list_all_provider_models(
         )
         for g in groups
     ]
+
+
+@router.get("/provider-models/{provider}/export", response_model=ProviderModelExportOut)
+async def export_provider_model_catalog(
+    provider: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _validate_provider(provider)
+    payload = await export_provider_catalog(db, provider)
+    return ProviderModelExportOut.model_validate(payload)
+
+
+@router.post(
+    "/provider-models/{provider}/import",
+    response_model=ImportProviderModelResponse,
+)
+async def import_provider_model_catalog(
+    provider: str,
+    body: ImportProviderModelRequest,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _validate_provider(provider)
+    imported = await import_provider_catalog(
+        db,
+        provider,
+        [m.model_dump() for m in body.models],
+        mode=body.mode,
+    )
+    return ImportProviderModelResponse(imported=imported)
 
 
 @router.get("/provider-models/{provider}", response_model=ProviderModelGroupOut)
@@ -525,7 +567,7 @@ async def list_provider_model_entries(
     db: AsyncSession = Depends(get_db),
 ):
     _validate_provider(provider)
-    rows = await list_provider_entries(db, current_user.id, provider)
+    rows = await list_provider_entries(db, None, provider)
     info = REGISTRY.get(provider)
     return ProviderModelGroupOut(
         provider=provider,
@@ -546,21 +588,30 @@ async def create_provider_model(
     db: AsyncSession = Depends(get_db),
 ):
     _validate_provider(provider)
-    await ensure_provider_seeded(db, current_user.id, provider)
+    catalog_uid = await resolve_catalog_user(db)
 
     repo = UserProviderModelRepository(db)
-    if await repo.get_by_model_id(current_user.id, provider, body.model_id):
-        raise HTTPException(status_code=409, detail="Model already exists for this provider")
+    existing = await repo.get_by_model_id(catalog_uid, provider, body.model_id)
+    if existing:
+        if not existing.is_removed:
+            raise HTTPException(status_code=409, detail="Model already exists for this provider")
+        existing.is_removed = False
+        existing.is_enabled = True
+        existing.display_name = body.display_name
+        existing.is_builtin = False
+        await db.commit()
+        await db.refresh(existing)
+        return ProviderModelEntryOut.model_validate(existing)
 
-    existing = await repo.list_for_provider(current_user.id, provider)
+    active = await repo.list_for_provider(catalog_uid, provider)
     row = await repo.create(
-        user_id=current_user.id,
+        user_id=catalog_uid,
         provider=provider,
         model_id=body.model_id,
         display_name=body.display_name,
         is_enabled=True,
         is_builtin=False,
-        sort_order=len(existing),
+        sort_order=len(active),
     )
     await db.commit()
     await db.refresh(row)
@@ -576,15 +627,16 @@ async def update_provider_model(
     db: AsyncSession = Depends(get_db),
 ):
     _validate_provider(provider)
+    catalog_uid = await resolve_catalog_user(db)
     repo = UserProviderModelRepository(db)
-    row = await repo.get_for_user(current_user.id, entry_id)
-    if not row or row.provider != provider:
+    row = await repo.get_for_user(catalog_uid, entry_id)
+    if not row or row.provider != provider or row.is_removed:
         raise HTTPException(status_code=404, detail="Model entry not found")
 
     if body.model_id is not None:
         if body.model_id != row.model_id:
-            conflict = await repo.get_by_model_id(current_user.id, provider, body.model_id)
-            if conflict:
+            conflict = await repo.get_by_model_id(catalog_uid, provider, body.model_id)
+            if conflict and not conflict.is_removed:
                 raise HTTPException(status_code=409, detail="Model already exists for this provider")
             row.model_id = body.model_id
 
@@ -606,10 +658,35 @@ async def delete_provider_model(
     db: AsyncSession = Depends(get_db),
 ):
     _validate_provider(provider)
+    catalog_uid = await resolve_catalog_user(db)
     repo = UserProviderModelRepository(db)
-    row = await repo.get_for_user(current_user.id, entry_id)
-    if not row or row.provider != provider:
+    row = await repo.get_for_user(catalog_uid, entry_id)
+    if not row or row.provider != provider or row.is_removed:
         raise HTTPException(status_code=404, detail="Model entry not found")
 
-    await repo.delete_for_user(current_user.id, entry_id)
+    if not await repo.soft_delete_for_user(catalog_uid, entry_id):
+        raise HTTPException(status_code=404, detail="Model entry not found")
     await db.commit()
+
+
+@router.post(
+    "/provider-models/{provider}/bulk",
+    response_model=BulkProviderModelResponse,
+)
+async def bulk_provider_models(
+    provider: str,
+    body: BulkProviderModelRequest,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _validate_provider(provider)
+    catalog_uid = await resolve_catalog_user(db)
+    affected = await bulk_update_provider_models(
+        db,
+        catalog_uid,
+        provider,
+        action=body.action,
+        entry_ids=body.entry_ids,
+        apply_to_all=body.apply_to == "all",
+    )
+    return BulkProviderModelResponse(affected=affected)

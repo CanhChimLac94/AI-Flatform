@@ -1,14 +1,13 @@
 import { listModelCatalog } from "./api";
-import { getGuestProviderModelGroups } from "./guestProviderModels";
 import { loadGuestSettings } from "./guestSettings";
 import { getProviderVisual } from "./providerVisuals";
 import type { ProviderModelEntry, ProviderModelGroup } from "./types";
 
-export const GUEST_SETTINGS_UPDATED_EVENT = "aichat:guest_settings_updated";
+export { GUEST_SETTINGS_UPDATED_EVENT } from "./guestSettings";
 
 export function isConfiguredApiKey(key: string | undefined | null): boolean {
   const k = (key ?? "").trim();
-  return k.length > 8 && !k.startsWith("sk-...");
+  return k.length > 8 && k !== "sk-...";
 }
 
 export function configuredGuestProviders(): Set<string> {
@@ -42,19 +41,17 @@ export function filterEnabledCatalogGroups(groups: ProviderModelGroup[]): Provid
     .filter((g) => g.models.length > 0);
 }
 
-export async function loadModelCatalog(isAuthenticated: boolean): Promise<ProviderModelGroup[]> {
-  if (!isAuthenticated) {
-    return filterEnabledCatalogGroups(getGuestProviderModelGroups());
-  }
+/** Load enabled model catalog from DB (same source for guest and authenticated users). */
+export async function loadModelCatalog(_isAuthenticated?: boolean): Promise<ProviderModelGroup[]> {
   const groups = await listModelCatalog();
   return filterEnabledCatalogGroups(groups);
 }
 
-/** Model catalog for chat — only providers with a configured API key. */
+/** Model catalog for chat — only providers with a configured API key (guest) or keys (auth). */
 export async function loadChatModelCatalog(isAuthenticated: boolean): Promise<ProviderModelGroup[]> {
   if (!isAuthenticated) {
     const configured = configuredGuestProviders();
-    const groups = filterEnabledCatalogGroups(getGuestProviderModelGroups());
+    const groups = await loadModelCatalog(false);
     return filterCatalogByConfiguredProviders(groups, configured);
   }
   const groups = await listModelCatalog({ requireKeys: true });
@@ -84,7 +81,9 @@ export function catalogOptionValue(provider: string, modelId: string): string {
   return `${provider}::${modelId}`;
 }
 
-export function parseCatalogOptionValue(value: string): { provider: string; modelId: string } | null {
+export function parseCatalogOptionValue(
+  value: string,
+): { provider: string; modelId: string } | null {
   const idx = value.indexOf("::");
   if (idx <= 0) return null;
   return { provider: value.slice(0, idx), modelId: value.slice(idx + 2) };

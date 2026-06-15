@@ -29,8 +29,8 @@ import {
   updateGuestApiKey,
   removeGuestApiKey,
 } from "@/lib/guestSettings";
-import { guestEnabledModelIds } from "@/lib/guestProviderModels";
 import { isConfiguredApiKey } from "@/lib/providerModelCatalog";
+import { listModelCatalog } from "@/lib/api";
 import { getProviderVisual } from "@/lib/providerVisuals";
 import { useI18n } from "@/contexts/I18nContext";
 
@@ -90,10 +90,13 @@ function ProviderChannelHeading({
   );
 }
 
-function buildGuestChannelStatus(providerId: string, savedKey: string): ProviderChannelStatus {
+function buildGuestChannelStatus(
+  providerId: string,
+  savedKey: string,
+  enabledCount: number,
+): ProviderChannelStatus {
   const hasStored = Boolean(savedKey?.trim());
   const keyUsable = isConfiguredApiKey(savedKey);
-  const enabledCount = guestEnabledModelIds(providerId).length;
   const chatReady = keyUsable && enabledCount > 0;
 
   let statusCode: ProviderKeyStatusCode = "unavailable";
@@ -607,11 +610,13 @@ function ServerApiKeyCard({
 function GuestKeyModal({
   provider,
   savedKey,
+  enabledModelsCount,
   onClose,
   onUpdated,
 }: {
   provider: ProviderConfig;
   savedKey: string;
+  enabledModelsCount: number;
   onClose: () => void;
   onUpdated: () => void;
 }) {
@@ -666,7 +671,9 @@ function GuestKeyModal({
         </div>
 
         <div className="px-5 py-4 space-y-4">
-          <ProviderChannelStatusPanel status={buildGuestChannelStatus(provider.id, savedKey)} />
+          <ProviderChannelStatusPanel
+            status={buildGuestChannelStatus(provider.id, savedKey, enabledModelsCount)}
+          />
 
           {savedKey && (
             <div className="space-y-2">
@@ -758,16 +765,18 @@ function GuestKeyModal({
 function GuestApiKeyCard({
   provider,
   savedKey,
+  enabledModelsCount,
   onUpdated,
 }: {
   provider: ProviderConfig;
   savedKey: string;
+  enabledModelsCount: number;
   onUpdated: () => void;
 }) {
   const { t } = useI18n();
   const keyPageUrl = PROVIDER_KEY_URLS[provider.id];
   const [modalOpen, setModalOpen] = useState(false);
-  const channelStatus = buildGuestChannelStatus(provider.id, savedKey);
+  const channelStatus = buildGuestChannelStatus(provider.id, savedKey, enabledModelsCount);
 
   return (
     <>
@@ -821,6 +830,7 @@ function GuestApiKeyCard({
         <GuestKeyModal
           provider={provider}
           savedKey={savedKey}
+          enabledModelsCount={enabledModelsCount}
           onClose={() => setModalOpen(false)}
           onUpdated={onUpdated}
         />
@@ -859,14 +869,31 @@ export function ApiKeysSection({
   onGuestUpdated: () => void;
 }) {
   const { t } = useI18n();
+  const [catalogEnabledCounts, setCatalogEnabledCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (isAuthenticated) return;
+    listModelCatalog()
+      .then((groups) => {
+        const counts: Record<string, number> = {};
+        for (const g of groups) counts[g.provider] = g.models.length;
+        setCatalogEnabledCounts(counts);
+      })
+      .catch(() => {});
+  }, [isAuthenticated, guestApiKeys, onGuestUpdated]);
 
   return (
     <div className="space-y-4">
       <p className="text-xs text-gray-400">
-        {t(
-          "settings.apiKeysSection.intro",
-          "Configure API keys per channel. Keys are encrypted when stored on the server.",
-        )}
+        {isAuthenticated
+          ? t(
+              "settings.apiKeysSection.intro",
+              "Configure API keys per channel. Keys are encrypted when stored on the server.",
+            )
+          : t(
+              "settings.apiKeysSection.guestIntro",
+              "Add API keys per channel for this session only. Keys are stored in temporary memory and cleared when you reload the page.",
+            )}
       </p>
 
       {isAuthenticated ? (
@@ -892,6 +919,7 @@ export function ApiKeysSection({
               key={p.id}
               provider={p}
               savedKey={guestApiKeys[p.id] ?? ""}
+              enabledModelsCount={catalogEnabledCounts[p.id] ?? 0}
               onUpdated={onGuestUpdated}
             />
           ))}

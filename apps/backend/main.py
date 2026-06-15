@@ -6,13 +6,13 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from redis.exceptions import ConnectionError as RedisConnectionError
-from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError, IntegrityError, OperationalError
 
 from app.api.v1.router import api_router
 from app.core.config import settings
-from app.db.redis import close_redis, get_redis
-from app.db.session import AsyncSessionLocal, engine
+from app.db.health import ping_postgres, ping_redis
+from app.db.redis import close_redis
+from app.db.session import AsyncSessionLocal
 from app.services.seed_system_agents import ensure_default_system_agents
 from app.services.flow_scheduler import flow_scheduler_loop
 
@@ -23,12 +23,10 @@ async def _wait_for_dependencies(max_attempts: int = 30, delay: float = 1.0) -> 
     last_err: Exception | None = None
     for attempt in range(1, max_attempts + 1):
         try:
-            async with engine.connect() as conn:
-                await conn.execute(text("SELECT 1"))
-            redis = get_redis()
-            await redis.ping()
-            logger.info("Database and Redis are ready.")
-            return
+            if await ping_postgres() and await ping_redis():
+                logger.info("Database and Redis are ready.")
+                return
+            raise RuntimeError("Postgres or Redis ping failed")
         except Exception as exc:
             last_err = exc
             logger.warning(
@@ -116,11 +114,13 @@ app.include_router(api_router, prefix="/v1")
 @app.get("/health")
 async def health_check():
     try:
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
-        redis = get_redis()
-        await redis.ping()
-        return {"status": "ok", "env": settings.ENVIRONMENT, "postgres": "ok", "redis": "ok"}
+        postgres_ok = await ping_postgres()
+        redis_ok = await ping_redis()
+        if postgres_ok and redis_ok:
+            return {"status": "ok", "env": settings.ENVIRONMENT, "postgres": "ok", "redis": "ok"}
+        raise RuntimeError(
+            f"postgres={'ok' if postgres_ok else 'down'}, redis={'ok' if redis_ok else 'down'}"
+        )
     except Exception as exc:
         return JSONResponse(
             status_code=503,

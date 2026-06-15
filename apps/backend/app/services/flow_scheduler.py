@@ -7,11 +7,13 @@ import logging
 from datetime import datetime, timezone
 
 from sqlalchemy import select
+from sqlalchemy.exc import DBAPIError, OperationalError
 from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
+from app.db.health import ping_postgres, ping_redis
 from app.db.redis import get_redis
-from app.db.session import AsyncSessionLocal
+from app.db.session import AsyncSessionLocal, engine
 from app.models.agent_flow import AgentFlow
 from app.models.agent_flow_schedule import AgentFlowSchedule
 from app.models.user import User
@@ -25,19 +27,26 @@ _LOCK_TTL_SECONDS = 600
 
 
 async def _try_acquire_lock(schedule_id: str) -> bool:
-    redis = get_redis()
-    acquired = await redis.set(
-        f"{_LOCK_PREFIX}{schedule_id}",
-        "1",
-        nx=True,
-        ex=_LOCK_TTL_SECONDS,
-    )
-    return bool(acquired)
+    try:
+        redis = get_redis()
+        acquired = await redis.set(
+            f"{_LOCK_PREFIX}{schedule_id}",
+            "1",
+            nx=True,
+            ex=_LOCK_TTL_SECONDS,
+        )
+        return bool(acquired)
+    except Exception as exc:
+        logger.warning("Flow schedule lock unavailable for %s: %s", schedule_id, exc)
+        return False
 
 
 async def _release_lock(schedule_id: str) -> None:
-    redis = get_redis()
-    await redis.delete(f"{_LOCK_PREFIX}{schedule_id}")
+    try:
+        redis = get_redis()
+        await redis.delete(f"{_LOCK_PREFIX}{schedule_id}")
+    except Exception as exc:
+        logger.warning("Flow schedule lock release failed for %s: %s", schedule_id, exc)
 
 
 async def _process_schedule(schedule: AgentFlowSchedule, flow: AgentFlow, owner: User) -> None:
@@ -130,11 +139,37 @@ async def flow_scheduler_loop() -> None:
     """Run forever until cancelled."""
     poll_seconds = max(15, settings.FLOW_SCHEDULER_POLL_SECONDS)
     logger.info("Flow scheduler started (poll every %ss)", poll_seconds)
+    postgres_paused = False
+    redis_paused = False
     while True:
         try:
+            if not await ping_postgres():
+                if not postgres_paused:
+                    logger.warning("Flow scheduler paused: Postgres unavailable")
+                    postgres_paused = True
+                await asyncio.sleep(poll_seconds)
+                continue
+            if postgres_paused:
+                logger.info("Flow scheduler resumed: Postgres is available again")
+                postgres_paused = False
+
+            if not await ping_redis():
+                if not redis_paused:
+                    logger.warning("Flow scheduler paused: Redis unavailable")
+                    redis_paused = True
+                await asyncio.sleep(poll_seconds)
+                continue
+            if redis_paused:
+                logger.info("Flow scheduler resumed: Redis is available again")
+                redis_paused = False
+
             await _poll_due_schedules()
         except asyncio.CancelledError:
             raise
+        except (OperationalError, DBAPIError, OSError) as exc:
+            logger.warning("Flow scheduler poll skipped: database unavailable (%s)", exc)
+            await engine.dispose()
+            postgres_paused = True
         except Exception:
             logger.exception("Flow scheduler poll failed")
         await asyncio.sleep(poll_seconds)
